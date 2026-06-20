@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>4-Room Floor Plan — Interactive 3D</title>
+<style>
+  :root{ --ink:#102a3a; --line:#9fb3c0; --paper:#eef2f5; --accent:#1b6ec2; --panel:rgba(255,255,255,.92); }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;color:var(--ink);
+    touch-action:none;-webkit-user-select:none;user-select:none}
+  #gl{display:block;position:fixed;inset:0;width:100%;height:100%;touch-action:none}
+  #labels{position:fixed;inset:0;pointer-events:none;overflow:hidden}
+  .lab{position:absolute;transform:translate(-50%,-50%);font-size:11px;font-weight:600;
+    letter-spacing:.04em;color:#0c2434;background:rgba(255,255,255,.7);padding:1px 5px;
+    border-radius:4px;white-space:nowrap;will-change:left,top}
+
+  .panel{position:fixed;background:var(--panel);border:1px solid var(--line);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:11px}
+  #controls{top:max(12px,env(safe-area-inset-top));left:12px;padding:11px;max-width:240px}
+  #controls h1{margin:0 0 2px;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+  #controls .sub{font-size:10px;color:#5d7488;margin-bottom:9px;line-height:1.45}
+  .grp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:7px}
+  button{font:inherit;font-size:12px;padding:8px 11px;min-height:36px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);border-radius:7px;cursor:pointer;transition:.12s;touch-action:manipulation}
+  button:active{transform:scale(.96)}
+  button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .hint{font-size:10px;color:#5d7488;line-height:1.5;margin-top:2px}
+
+  #legend{bottom:max(12px,env(safe-area-inset-bottom));left:12px;padding:9px 11px;font-size:10px;line-height:1.7}
+  #legend .row{display:flex;align-items:center;gap:7px}
+  #legend i{width:11px;height:11px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.12)}
+  #readout{bottom:max(12px,env(safe-area-inset-bottom));right:12px;padding:8px 11px;font-size:10px;text-align:right;color:#5d7488}
+  #readout b{color:var(--ink)}
+  #compass{top:max(12px,env(safe-area-inset-top));right:12px;width:50px;height:50px;display:grid;place-items:center;font-size:11px;font-weight:700}
+  #compass svg{position:absolute}
+
+  /* walk move pad */
+  #pad{position:fixed;left:18px;bottom:90px;width:120px;height:120px;border-radius:50%;
+    border:1px solid var(--line);background:rgba(255,255,255,.55);display:none;touch-action:none}
+  #knob{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;
+    background:var(--accent);opacity:.85;transition:opacity .1s}
+  #walkmsg{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);display:none;
+    font-size:11px;color:#5d7488;background:var(--panel);border:1px solid var(--line);
+    padding:6px 12px;border-radius:8px}
+
+  #err{position:fixed;left:12px;right:12px;top:12px;display:none;z-index:50;background:#3a0d0d;
+    color:#ffd9d9;font-size:11px;padding:10px 12px;border-radius:8px;white-space:pre-wrap}
+  @media (max-width:560px){
+    #controls{max-width:48vw;padding:9px}
+    #controls .sub{display:none}
+    #legend,#readout{display:none}
+  }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="labels"></div>
+
+<div id="controls" class="panel">
+  <h1>4-Room Plan</h1>
+  <div class="sub">Massing model scaled from your blueprint. One finger / drag = orbit · pinch or two-finger = zoom &amp; pan.</div>
+  <div class="grp" id="viewbtns">
+    <button data-v="iso" class="on">Iso</button>
+    <button data-v="top">Top</button>
+    <button data-v="reset">Reset</button>
+  </div>
+  <div class="grp" id="togglebtns">
+    <button data-t="walls" class="on">Walls</button>
+    <button data-t="ceiling">Ceiling</button>
+    <button data-t="labels" class="on">Labels</button>
+    <button data-t="furniture" class="on">Furniture</button>
+  </div>
+  <div class="grp"><button id="walkbtn">Walk through</button><button id="recenterbtn" style="display:none">↺ Entrance</button></div>
+  <div class="hint" id="walkkeys" style="display:none">Drag right side to look · pad (or WASD) to move</div>
+</div>
+
+<div id="compass" class="panel">
+  <svg width="50" height="50" viewBox="0 0 50 50"><polygon points="25,7 29,25 25,21 21,25" fill="#1b6ec2"/></svg>
+  <span style="margin-top:-20px">N</span>
+</div>
+
+<div id="legend" class="panel">
+  <div class="row"><i style="background:#cfe0ec"></i> Bedrooms</div>
+  <div class="row"><i style="background:#bfe3df"></i> Bath / Shelter</div>
+  <div class="row"><i style="background:#f0e2c8"></i> Living / Dining</div>
+  <div class="row"><i style="background:#dfe4e8"></i> Kitchen / Service</div>
+</div>
+
+<div id="readout" class="panel">
+  Footprint ≈ <b>12.35 × 8.99 m</b><br>Ceiling <b>2.60 m</b> · Area ≈ <b>92 m²</b>
+</div>
+
+<div id="pad"><div id="knob"></div></div>
+<div id="walkmsg">Walk mode — tap “Walk through” again to exit</div>
+<div id="err"></div>
+
+<script>
+"use strict";
+const errBox=document.getElementById('err');
+function showErr(m){errBox.style.display='block';errBox.textContent='⚠ '+m;}
+window.addEventListener('error',e=>showErr((e.message||'error')+(e.lineno?(' @'+e.lineno):'')));
+
+/* ===== floor-plan data (metres, scaled from blueprint mm) ===== */
+const WALL_H=2.60, T=0.12;
+const C={bed:0xcfe0ec, wet:0xbfe3df, live:0xf0e2c8, serv:0xdfe4e8};
+const rooms=[
+  {n:"MAIN BEDROOM",x:0.00,z:0.00,w:2.975,d:4.635,c:C.bed,doors:[{s:"E",o:3.55,w:0.9},{s:"S",o:1.25,w:0.7}]},
+  {n:"BEDROOM 2",   x:2.975,z:0.00,w:2.805,d:3.490,c:C.bed,doors:[{s:"S",o:1.0,w:0.9}]},
+  {n:"BEDROOM 3",   x:5.780,z:0.00,w:2.805,d:3.490,c:C.bed,doors:[{s:"S",o:1.6,w:0.9}]},
+  {n:"LIVING / DINING",x:8.585,z:0.00,w:3.765,d:6.810,c:C.live,doors:[{s:"S",o:1.0,w:1.2}],open:["W"]},
+  {n:"BATH / WC",   x:0.000,z:4.635,w:2.100,d:1.830,c:C.wet,doors:[{s:"N",o:1.25,w:0.7}]},
+  {n:"BATH / WC",   x:2.340,z:4.635,w:1.600,d:1.830,c:C.wet,doors:[{s:"N",o:0.5,w:0.7}]},
+  {n:"HH SHELTER",  x:3.940,z:4.635,w:2.015,d:1.535,c:C.wet,doors:[{s:"W",o:0.5,w:0.7}]},
+  {n:"AIR-CON LEDGE",x:0.000,z:6.465,w:2.100,d:1.550,c:C.serv,wh:1.0},          // open external ledge under left bath, flush with left wall
+  {n:"SERVICE YARD",x:2.130,z:6.465,w:1.490,d:1.700,c:C.serv,doors:[{s:"E",o:0.5,w:0.8}]},
+  {n:"KITCHEN",     x:3.620,z:6.170,w:3.685,d:2.000,c:C.serv,open:["E"],
+     doors:[{s:"N",o:2.6,w:1.0},{s:"W",o:0.795,w:0.8}]},                        // W door -> service yard
+];
+const FW=12.35, FD=8.985, CX=FW/2, CZ=FD/2;
+
+/* ===== tiny mat4 (column-major) ===== */
+const M={
+  mul(a,b){const o=new Float32Array(16);for(let c=0;c<4;c++)for(let r=0;r<4;r++){let s=0;for(let k=0;k<4;k++)s+=a[k*4+r]*b[c*4+k];o[c*4+r]=s;}return o;},
+  persp(f,a,n,fa){const t=1/Math.tan(f/2);return new Float32Array([t/a,0,0,0, 0,t,0,0, 0,0,(fa+n)/(n-fa),-1, 0,0,(2*fa*n)/(n-fa),0]);},
+  look(e,c,u){const z=norm(sub(e,c)),x=norm(cross(u,z)),y=cross(z,x);
+    return new Float32Array([x[0],y[0],z[0],0, x[1],y[1],z[1],0, x[2],y[2],z[2],0, -dot(x,e),-dot(y,e),-dot(z,e),1]);},
+};
+function sub(a,b){return[a[0]-b[0],a[1]-b[1],a[2]-b[2]];}
+function cross(a,b){return[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];}
+function dot(a,b){return a[0]*b[0]+a[1]*b[1]+a[2]*b[2];}
+function norm(a){const l=Math.hypot(a[0],a[1],a[2])||1;return[a[0]/l,a[1]/l,a[2]/l];}
+
+/* ===== geometry builder (bakes everything to world space) ===== */
+const FACES=[
+ {n:[1,0,0], v:[[.5,-.5,-.5],[.5,.5,-.5],[.5,.5,.5],[.5,-.5,.5]]},
+ {n:[-1,0,0],v:[[-.5,-.5,.5],[-.5,.5,.5],[-.5,.5,-.5],[-.5,-.5,-.5]]},
+ {n:[0,1,0], v:[[-.5,.5,-.5],[-.5,.5,.5],[.5,.5,.5],[.5,.5,-.5]]},
+ {n:[0,-1,0],v:[[-.5,-.5,.5],[-.5,-.5,-.5],[.5,-.5,-.5],[.5,-.5,.5]]},
+ {n:[0,0,1], v:[[-.5,-.5,.5],[.5,-.5,.5],[.5,.5,.5],[-.5,.5,.5]]},
+ {n:[0,0,-1],v:[[.5,-.5,-.5],[-.5,-.5,-.5],[-.5,.5,-.5],[.5,.5,-.5]]},
+];
+function hex(h){return[(h>>16&255)/255,(h>>8&255)/255,(h&255)/255];}
+function addBox(arr, cx,cy,cz, sx,sy,sz, col, ay){
+  const ca=Math.cos(ay||0), sa=Math.sin(ay||0), [r,g,b]=col;
+  const tri=[0,1,2,0,2,3];
+  for(const f of FACES){
+    const nx=f.n[0]*ca+f.n[2]*sa, nz=-f.n[0]*sa+f.n[2]*ca, ny=f.n[1];
+    const P=f.v.map(p=>{
+      let X=p[0]*sx, Y=p[1]*sy, Z=p[2]*sz;
+      const rx=X*ca+Z*sa, rz=-X*sa+Z*ca;
+      return [cx+rx, cy+Y, cz+rz];
+    });
+    for(const i of tri){const p=P[i];arr.push(p[0],p[1],p[2], nx,ny,nz, r,g,b);}
+  }
+}
+
+const G={floors:[],walls:[],ceiling:[],furniture:[]};
+const wallSegs=[];  // centerlines for walk-mode collision
+
+// ground + grid
+addBox(G.floors, CX,-0.03,CZ, 64,0.02,64, hex(0xf2f5f7));
+const gridArr=[];
+(function(){const c=hex(0xd2dde4);const x0=-6,x1=FW+6,z0=-6,z1=FD+6;
+ for(let x=Math.ceil(x0);x<=x1;x++){gridArr.push(x,0,z0,0,1,0,c[0],c[1],c[2], x,0,z1,0,1,0,c[0],c[1],c[2]);}
+ for(let z=Math.ceil(z0);z<=z1;z++){gridArr.push(x0,0,z,0,1,0,c[0],c[1],c[2], x1,0,z,0,1,0,c[0],c[1],c[2]);}})();
+
+// rooms
+function edge(r,s){const{x,z,w,d}=r;return s==="N"?[x,z,x+w,z]:s==="S"?[x,z+d,x+w,z+d]:s==="W"?[x,z,x,z+d]:[x+w,z,x+w,z+d];}
+function addWall(ax,az,bx,bz,ops,h){
+  h=h||WALL_H;
+  const len=Math.hypot(bx-ax,bz-az), dx=(bx-ax)/len, dz=(bz-az)/len;
+  let segs=[[0,len]];
+  (ops||[]).forEach(([s,e])=>{for(let i=segs.length-1;i>=0;i--){const[a,b]=segs[i];if(e<=a||s>=b)continue;segs.splice(i,1);if(e<b)segs.splice(i,0,[Math.max(e,a),b]);if(s>a)segs.splice(i,0,[a,Math.min(s,b)]);}});
+  for(const[s,e]of segs){const l=e-s;if(l<0.02)continue;const mx=ax+dx*(s+l/2),mz=az+dz*(s+l/2);
+    addBox(G.walls, mx,h/2,mz, l,h,T, hex(0xeef1f3), -Math.atan2(dz,dx));
+    wallSegs.push({ax:ax+dx*s,az:az+dz*s,bx:ax+dx*e,bz:az+dz*e});}
+}
+const labelData=[];
+for(const r of rooms){
+  addBox(G.floors, r.x+r.w/2,0.02,r.z+r.d/2, r.w-0.05,0.04,r.d-0.05, hex(r.c));
+  labelData.push({n:r.n, p:[r.x+r.w/2,1.3,r.z+r.d/2]});
+  for(const s of["N","S","E","W"]){
+    if(r.open&&r.open.includes(s))continue;
+    const[ax,az,bx,bz]=edge(r,s);
+    const ops=(r.doors||[]).filter(dd=>dd.s===s).map(dd=>[dd.o,dd.o+dd.w]);
+    addWall(ax,az,bx,bz,ops, r.wh||WALL_H);
+  }
+}
+addBox(G.ceiling, CX,WALL_H+0.04,CZ, FW,0.08,FD, hex(0xf7f9fb));
+
+// furniture
+const BED=0xc9a892,SOFA=0x6d8a96,WOOD=0xb08968,APP=0xd7dde1;
+addBox(G.furniture,1.0,0.22,1.3,1.5,0.45,2.0,hex(BED));
+addBox(G.furniture,4.0,0.22,1.0,1.2,0.45,1.9,hex(BED));
+addBox(G.furniture,6.8,0.22,1.0,1.2,0.45,1.9,hex(BED));
+addBox(G.furniture,9.2,0.25,2.4,0.9,0.5,2.4,hex(SOFA));
+addBox(G.furniture,10.4,0.18,2.4,1.0,0.35,0.6,hex(WOOD));
+addBox(G.furniture,10.6,0.2,5.2,1.6,0.4,0.9,hex(WOOD));
+addBox(G.furniture,5.4,0.42,6.4,3.4,0.85,0.6,hex(APP));
+addBox(G.furniture,4.0,0.85,7.0,0.6,1.7,0.6,hex(APP));
+
+/* ===== WebGL setup ===== */
+const cv=document.getElementById('gl');
+const gl=cv.getContext('webgl')||cv.getContext('experimental-webgl');
+if(!gl){showErr("WebGL isn't available in this browser. Try Safari/Chrome.");}
+function sh(t,src){const s=gl.createShader(t);gl.shaderSource(s,src);gl.compileShader(s);
+  if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))showErr(gl.getShaderInfoLog(s));return s;}
+const prog=gl.createProgram();
+gl.attachShader(prog,sh(gl.VERTEX_SHADER,`
+ attribute vec3 aPos,aNorm,aCol; uniform mat4 uVP; varying vec3 vN,vC;
+ void main(){vN=aNorm;vC=aCol;gl_Position=uVP*vec4(aPos,1.0);}`));
+gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,`
+ precision mediump float; varying vec3 vN,vC;
+ void main(){vec3 N=normalize(vN);vec3 L=normalize(vec3(-0.5,1.0,-0.4));
+ float d=max(dot(N,L),0.0);float h=N.y*0.5+0.5;
+ vec3 hemi=mix(vec3(0.7,0.73,0.77),vec3(0.96,0.98,1.0),h);
+ vec3 c=vC*(0.55*hemi+0.6*d+0.12); gl_FragColor=vec4(c,1.0);}`));
+gl.linkProgram(prog); gl.useProgram(prog);
+const aPos=gl.getAttribLocation(prog,'aPos'), aNorm=gl.getAttribLocation(prog,'aNorm'),
+      aCol=gl.getAttribLocation(prog,'aCol'), uVP=gl.getUniformLocation(prog,'uVP');
+gl.enable(gl.DEPTH_TEST);
+gl.clearColor(0.933,0.949,0.961,1);
+
+function buf(data){const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);
+  gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(data),gl.STATIC_DRAW);return{b,count:data.length/9};}
+const B={floors:buf(G.floors),walls:buf(G.walls),ceiling:buf(G.ceiling),
+         furniture:buf(G.furniture),grid:buf(gridArr)};
+function draw(o,mode){gl.bindBuffer(gl.ARRAY_BUFFER,o.b);const st=36;
+  gl.vertexAttribPointer(aPos,3,gl.FLOAT,false,st,0);gl.enableVertexAttribArray(aPos);
+  gl.vertexAttribPointer(aNorm,3,gl.FLOAT,false,st,12);gl.enableVertexAttribArray(aNorm);
+  gl.vertexAttribPointer(aCol,3,gl.FLOAT,false,st,24);gl.enableVertexAttribArray(aCol);
+  gl.drawArrays(mode,0,o.count);}
+
+const vis={walls:true,ceiling:false,labels:true,furniture:true};
+
+/* ===== camera ===== */
+let theta=-0.9, phi=0.95, radius=18, target=[CX,1.0,CZ];
+let walk=false, yaw=-Math.PI/2, pitch=0, wpos=[CX,1.6,CZ+6], move=[0,0];
+const ENTRY=[10.185,1.6,6.30], ENTRY_YAW=-Math.PI/2;   // just inside the front door, facing in
+function resetWalk(){wpos=[ENTRY[0],ENTRY[1],ENTRY[2]];yaw=ENTRY_YAW;pitch=0;move=[0,0];}
+function eyePos(){return[target[0]+radius*Math.sin(phi)*Math.cos(theta),
+  target[1]+radius*Math.cos(phi), target[2]+radius*Math.sin(phi)*Math.sin(theta)];}
+let VP=M.persp(1,1,0.05,200);
+
+function resize(){const dpr=Math.min(devicePixelRatio,2);
+  cv.width=innerWidth*dpr;cv.height=innerHeight*dpr;gl.viewport(0,0,cv.width,cv.height);}
+addEventListener('resize',resize); resize();
+
+/* ===== labels overlay ===== */
+const labWrap=document.getElementById('labels');
+const labEls=labelData.map(l=>{const e=document.createElement('div');e.className='lab';e.textContent=l.n;labWrap.appendChild(e);return e;});
+function tv(m,v){const o=[0,0,0,0];for(let i=0;i<4;i++)o[i]=m[i]*v[0]+m[4+i]*v[1]+m[8+i]*v[2]+m[12+i]*v[3];return o;}
+function updateLabels(){
+  for(let i=0;i<labelData.length;i++){const e=labEls[i];
+    if(!vis.labels||walk){e.style.display='none';continue;}
+    const p=labelData[i].p, c=tv(VP,[p[0],p[1],p[2],1]);
+    if(c[3]<=0){e.style.display='none';continue;}
+    const x=(c[0]/c[3]*0.5+0.5)*innerWidth, y=(1-(c[1]/c[3]*0.5+0.5))*innerHeight;
+    e.style.display='block';e.style.left=x+'px';e.style.top=y+'px';}
+}
+
+/* ===== walk-mode wall collision (player slides along walls, passes through doorways) ===== */
+const PR=0.24, HT=T/2;
+function collide(px,pz){
+  for(let it=0;it<3;it++){
+    for(const s of wallSegs){
+      const dx=s.bx-s.ax, dz=s.bz-s.az, L2=dx*dx+dz*dz||1e-6;
+      let t=((px-s.ax)*dx+(pz-s.az)*dz)/L2; t=Math.max(0,Math.min(1,t));
+      const cx=s.ax+dx*t, cz=s.az+dz*t;
+      let nx=px-cx, nz=pz-cz, d=Math.hypot(nx,nz); const min=PR+HT;
+      if(d<min){ if(d<1e-4){nx=1;nz=0;d=1;} const k=(min-d)/d; px+=nx*k; pz+=nz*k; }
+    }
+  }
+  return [px,pz];
+}
+
+/* ===== render loop ===== */
+let last=performance.now();
+function frame(now){const dt=Math.min(0.05,(now-last)/1000);last=now;
+  let view;
+  if(walk){
+    // forward (W / pad-up) and right (D / pad-right) inputs
+    let fi, ri;
+    if(padId===null){ fi=(keys.KeyW?1:0)-(keys.KeyS?1:0); ri=(keys.KeyD?1:0)-(keys.KeyA?1:0); }
+    else { fi=-move[1]; ri=move[0]; }
+    if(fi||ri){const sp=2.4*dt;
+      const F=[Math.cos(yaw),0,Math.sin(yaw)], R=[-Math.sin(yaw),0,Math.cos(yaw)];
+      const nx=wpos[0]+(F[0]*fi+R[0]*ri)*sp;
+      const nz=wpos[2]+(F[2]*fi+R[2]*ri)*sp;
+      const r=collide(nx,nz); wpos[0]=r[0]; wpos[2]=r[1];}
+    wpos[1]=1.6;
+    const c=[wpos[0]+Math.cos(yaw)*Math.cos(pitch),wpos[1]+Math.sin(pitch),wpos[2]+Math.sin(yaw)*Math.cos(pitch)];
+    view=M.look(wpos,c,[0,1,0]);
+  }else view=M.look(eyePos(),target,[0,1,0]);
+  VP=M.mul(M.persp(50*Math.PI/180, cv.width/cv.height, 0.05, 200), view);
+  gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  gl.uniformMatrix4fv(uVP,false,VP);
+  draw(B.grid,gl.LINES);
+  draw(B.floors,gl.TRIANGLES);
+  if(vis.furniture)draw(B.furniture,gl.TRIANGLES);
+  if(vis.walls)draw(B.walls,gl.TRIANGLES);
+  if(vis.ceiling&&!walk)draw(B.ceiling,gl.TRIANGLES);
+  updateLabels();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ===== pointer input (mouse + touch, unified) ===== */
+const pts=new Map();
+let pinchD=0, pinchMid=null, lookId=null, lookLast=null;
+cv.addEventListener('pointerdown',e=>{cv.setPointerCapture(e.pointerId);
+  if(walk){ if(lookId===null){lookId=e.pointerId;lookLast={x:e.clientX,y:e.clientY};} return; }
+  pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pts.size===2){const a=[...pts.values()];pinchD=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);pinchMid=[(a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2];}});
+cv.addEventListener('pointermove',e=>{
+  if(walk){ if(e.pointerId!==lookId||!lookLast)return;
+    const dx=e.clientX-lookLast.x, dy=e.clientY-lookLast.y; lookLast={x:e.clientX,y:e.clientY};
+    yaw-=dx*0.004; pitch=Math.max(-1.2,Math.min(1.2,pitch-dy*0.004)); return; }
+  const p=pts.get(e.pointerId);if(!p)return;
+  const dx=e.clientX-p.x, dy=e.clientY-p.y; p.x=e.clientX;p.y=e.clientY;
+  if(pts.size>=2){const a=[...pts.values()];const nd=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+    if(pinchD){radius=Math.max(3,Math.min(42,radius*(pinchD/nd)));}pinchD=nd;
+    const mid=[(a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2];
+    if(pinchMid){pan(mid[0]-pinchMid[0],mid[1]-pinchMid[1]);}pinchMid=mid;
+  }else{ theta+=dx*0.005; phi=Math.max(0.05,Math.min(1.54,phi+dy*0.005)); }});
+function endPt(e){if(e.pointerId===lookId){lookId=null;lookLast=null;}pts.delete(e.pointerId);if(pts.size<2){pinchD=0;pinchMid=null;}}
+cv.addEventListener('pointerup',endPt); cv.addEventListener('pointercancel',endPt);
+cv.addEventListener('wheel',e=>{e.preventDefault();radius=Math.max(3,Math.min(42,radius*(1+Math.sign(e.deltaY)*0.08)));},{passive:false});
+function pan(dx,dy){const f=radius*0.0016;
+  const right=[Math.sin(theta),0,-Math.cos(theta)], fwd=[-Math.cos(theta),0,-Math.sin(theta)];
+  target[0]+=(-right[0]*dx+fwd[0]*dy)*f; target[2]+=(-right[2]*dx+fwd[2]*dy)*f;}
+
+/* keyboard (desktop) */
+const keys={};
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Escape'&&walk)setWalk(false);});
+addEventListener('keyup',e=>keys[e.code]=false);
+/* movement is read in the render loop (pad has priority; keyboard when pad idle) */
+
+/* ===== walk move pad ===== */
+const pad=document.getElementById('pad'), knob=document.getElementById('knob');
+let padId=null;
+pad.addEventListener('pointerdown',e=>{padId=e.pointerId;pad.setPointerCapture(e.pointerId);padMove(e);e.stopPropagation();});
+pad.addEventListener('pointermove',e=>{if(padId===e.pointerId){padMove(e);e.stopPropagation();}});
+function padEnd(e){if(padId===e.pointerId){padId=null;move[0]=move[1]=0;knob.style.left='50%';knob.style.top='50%';}}
+pad.addEventListener('pointerup',padEnd); pad.addEventListener('pointercancel',padEnd);
+function padMove(e){const r=pad.getBoundingClientRect();let dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
+  const max=r.width/2-12,len=Math.hypot(dx,dy);if(len>max){dx*=max/len;dy*=max/len;}
+  knob.style.left=(50+dx/r.width*100)+'%';knob.style.top=(50+dy/r.height*100)+'%';
+  move[0]=dx/max; move[1]=dy/max;}
+
+/* ===== UI ===== */
+document.getElementById('viewbtns').addEventListener('click',e=>{const v=e.target.dataset.v;if(!v)return;
+  if(walk)setWalk(false);
+  document.querySelectorAll('#viewbtns button').forEach(b=>b.classList.remove('on'));e.target.classList.add('on');
+  if(v==='top'){phi=0.04;theta=-Math.PI/2;radius=15;target=[CX,1,CZ];}
+  else{phi=0.95;theta=-0.9;radius=18;target=[CX,1,CZ];}});
+document.getElementById('togglebtns').addEventListener('click',e=>{const t=e.target.dataset.t;if(!t)return;
+  vis[t]=!vis[t];e.target.classList.toggle('on',vis[t]);});
+function setWalk(on){walk=on;document.getElementById('walkbtn').classList.toggle('on',on);
+  document.getElementById('walkkeys').style.display=on?'block':'none';
+  document.getElementById('recenterbtn').style.display=on?'inline-block':'none';
+  pad.style.display=on?'block':'none';document.getElementById('walkmsg').style.display=on?'block':'none';
+  if(on)resetWalk();}
+document.getElementById('walkbtn').addEventListener('click',()=>setWalk(!walk));
+document.getElementById('recenterbtn').addEventListener('click',resetWalk);
+</script>
+</body>
+</html>

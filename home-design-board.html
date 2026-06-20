@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Home Design Board</title>
+<style>
+  :root{ --ink:#102a3a; --line:#9fb3c0; --paper:#eef2f5; --accent:#1b6ec2; --panel:#ffffff;
+    --bed:#cfe0ec; --wet:#bfe3df; --live:#f0e2c8; --serv:#dfe4e8; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+  header{padding:16px 18px 10px}
+  h1{margin:0;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
+  .sub{font-size:11px;color:#5d7488;margin-top:4px;line-height:1.5;max-width:640px}
+  .wrap{display:flex;gap:16px;padding:6px 16px 24px;align-items:flex-start;flex-wrap:wrap}
+  .planbox{flex:1 1 420px;min-width:300px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:12px}
+  svg{width:100%;height:auto;display:block;touch-action:manipulation}
+  .room{cursor:pointer;transition:.12s}
+  .room rect{stroke:#fff;stroke-width:3;transition:.12s}
+  .room:hover rect{filter:brightness(.95)}
+  .room.sel rect{stroke:var(--accent);stroke-width:6}
+  .room text{font-size:15px;fill:#0c2434;pointer-events:none;font-weight:600}
+  .dot{pointer-events:none}
+
+  .detail{flex:1 1 320px;min-width:280px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px;position:sticky;top:12px}
+  .detail h2{margin:0 0 2px;font-size:14px;letter-spacing:.08em}
+  .dim{font-size:11px;color:#5d7488;margin-bottom:12px}
+  .swatches{display:flex;gap:6px;margin-bottom:12px}
+  .swatches i{width:26px;height:26px;border-radius:5px;border:1px solid rgba(0,0,0,.12)}
+  .notes{font-size:12px;line-height:1.6;color:#26414f;margin-bottom:14px}
+  .imgwrap{position:relative;border:1.5px dashed var(--line);border-radius:10px;overflow:hidden;
+    background:#f6f8fa;min-height:170px;display:grid;place-items:center;text-align:center}
+  .imgwrap.has img{display:block;width:100%;height:auto}
+  .imgwrap img{display:none}
+  .drop{padding:22px 14px;font-size:12px;color:#5d7488;line-height:1.6}
+  .drop b{color:var(--accent)}
+  .imgbtns{display:flex;gap:8px;margin-top:10px}
+  button{font:inherit;font-size:12px;padding:8px 12px;border:1px solid var(--line);background:#fff;
+    color:var(--ink);border-radius:7px;cursor:pointer}
+  button:hover{border-color:var(--accent);color:var(--accent)}
+  button.ghost{color:#90505a;border-color:#e3c2c6}
+  .util{font-size:11px;color:#5d7488;margin-top:10px}
+  .pill{display:inline-block;font-size:10px;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+  .pill.done{background:#dff3e6;color:#1f7a44}
+  .pill.todo{background:#fdeede;color:#9a6a2a}
+  input[type=file]{display:none}
+  footer{font-size:10px;color:#8aa0ad;padding:0 18px 22px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Home Design Board</h1>
+  <div class="sub">Tap a room to see its design direction and palette. Add that room's render: save the image from the chat, then tap “Add render” on the room. Renders are saved on this device.</div>
+</header>
+
+<div class="wrap">
+  <div class="planbox">
+    <svg id="plan" viewBox="0 0 1235 899" aria-label="Floor plan"></svg>
+  </div>
+  <div class="detail" id="detail">
+    <h2>Select a room</h2>
+    <div class="notes">Tap any room on the plan to open its design.</div>
+  </div>
+</div>
+<footer id="foot"></footer>
+<input type="file" id="file" accept="image/*">
+
+<script>
+"use strict";
+const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"};
+const rooms=[
+ {id:"master",n:"MAIN BEDROOM",x:0,z:0,w:2.975,d:4.635,cat:"bed",zone:"design",
+  pal:["#caa57f","#e9e2d2","#c9742f","#2f4d8c"],
+  notes:"Calm take on the palette — oak slat headboard wall, oatmeal + camel linen bedding, mustard and cobalt cushions, a woven rattan pendant, warm oak floor, one large leafy plant."},
+ {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.10,d:1.83,cat:"wet",zone:"design",
+  pal:["#c9742f","#e9e2d2","#b8854a","#9aa0a6"],
+  notes:"Terracotta + cream zellige tiles, oak vanity, round mirror, brass fixtures, warm task lighting."},
+ {id:"bed2",n:"BEDROOM 2",x:2.975,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
+  pal:["#e9e2d2","#d8a3a0","#caa57f","#c9742f"],
+  notes:"Lighter and softer — cream walls, dusty-pink textiles, an oak desk, a playful graphic print, rattan accents."},
+ {id:"bed3",n:"BEDROOM 3",x:5.78,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
+  pal:["#2f4d8c","#e9e2d2","#caa57f","#c9742f"],
+  notes:"Cobalt feature wall, oak bed, mustard throw, a mid-century desk lamp."},
+ {id:"living",n:"LIVING / DINING",x:8.585,z:0,w:3.765,d:6.81,cat:"live",zone:"design",hero:true,
+  pal:["#b07a52","#c9742f","#2f4d8c","#d8a3a0"],
+  notes:"Camel velvet tufted sectional, dusty-pink + travertine tables, mid-century spindle lounge chairs; teak dining table with cobalt Cesca chairs, brass globe pendant, mustard graphic art, oak trim, greenery."},
+ {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.60,d:1.83,cat:"wet",zone:"design",
+  pal:["#3f7d6e","#e9e2d2","#caa57f","#b8854a"],
+  notes:"Common bath — muted green or cobalt tile, oak accents, brass, round mirror."},
+ {id:"kitchen",n:"KITCHEN",x:3.62,z:6.17,w:3.685,d:2.0,cat:"serv",zone:"design",
+  pal:["#caa57f","#e9e2d2","#c9742f","#b8854a"],
+  notes:"Oak cabinetry, cream + terracotta tiled splashback, brass tap, open shelving with ceramics."},
+ {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.535,cat:"wet",zone:"util",
+  notes:"Household shelter — storage / utility, keep functional."},
+ {id:"ledge",n:"AIR-CON LEDGE",x:0,z:6.465,w:2.10,d:1.55,cat:"serv",zone:"util",
+  notes:"External services ledge."},
+ {id:"yard",n:"SERVICE YARD",x:2.13,z:6.465,w:1.49,d:1.70,cat:"serv",zone:"util",
+  notes:"Laundry / utility."},
+];
+const S=100; // metres -> svg units
+const renders={};            // id -> dataURL
+const hasStore = !!(window.storage && window.storage.get);
+
+/* ---- build plan ---- */
+const svg=document.getElementById('plan');
+const NS="http://www.w3.org/2000/svg";
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+rooms.forEach(r=>{
+  const g=el("g",{class:"room","data-id":r.id});
+  g.appendChild(el("rect",{x:r.x*S,y:r.z*S,width:r.w*S,height:r.d*S,rx:4,fill:Z[r.cat],opacity:r.zone==="util"?0.55:1}));
+  const cx=(r.x+r.w/2)*S, cy=(r.z+r.d/2)*S;
+  const t=el("text",{x:cx,y:cy,"text-anchor":"middle","dominant-baseline":"middle"});
+  t.textContent=r.n; g.appendChild(t);
+  if(r.zone==="design"){const dot=el("circle",{class:"dot",cx:r.x*S+16,cy:r.z*S+16,r:7,fill:"#c9a33a"});dot.dataset.dot=r.id;g.appendChild(dot);}
+  g.addEventListener("click",()=>select(r.id));
+  svg.appendChild(g);
+});
+
+/* ---- detail panel ---- */
+const detail=document.getElementById('detail');
+const fileInput=document.getElementById('file');
+let selected=null, pendingId=null;
+
+function select(id){
+  selected=id;
+  document.querySelectorAll('.room').forEach(g=>g.classList.toggle('sel',g.dataset.id===id));
+  renderPanel();
+}
+function renderPanel(){
+  const r=rooms.find(x=>x.id===selected); if(!r)return;
+  const area=(r.w*r.d).toFixed(1);
+  let html=`<h2>${r.n}${r.zone==="design"?`<span class="pill ${renders[r.id]?'done':'todo'}">${renders[r.id]?'render added':'no render'}</span>`:''}</h2>`;
+  html+=`<div class="dim">${r.w.toFixed(2)} × ${r.d.toFixed(2)} m · ≈ ${area} m²</div>`;
+  if(r.zone==="design"){
+    if(r.pal){html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}"></i>`).join('')}</div>`;}
+    html+=`<div class="notes">${r.notes}</div>`;
+    html+=`<div class="imgwrap ${renders[r.id]?'has':''}" id="iw">
+      <img id="rimg" ${renders[r.id]?`src="${renders[r.id]}"`:''} alt="${r.n} render">
+      <div class="drop" ${renders[r.id]?'style="display:none"':''}>Drop the render here, or<br><b>tap “Add render”</b> below</div></div>`;
+    html+=`<div class="imgbtns"><button id="addbtn">${renders[r.id]?'Replace render':'Add render'}</button>`;
+    if(renders[r.id])html+=`<button class="ghost" id="clrbtn">Remove</button>`;
+    html+=`</div>`;
+  }else{
+    html+=`<div class="notes">${r.notes}</div><div class="util">Utility zone — no design render.</div>`;
+  }
+  detail.innerHTML=html;
+  const ab=document.getElementById('addbtn');
+  if(ab)ab.onclick=()=>{pendingId=r.id;fileInput.click();};
+  const cb=document.getElementById('clrbtn');
+  if(cb)cb.onclick=()=>clearRender(r.id);
+  const iw=document.getElementById('iw');
+  if(iw){
+    iw.addEventListener('dragover',e=>{e.preventDefault();iw.style.borderColor='var(--accent)';});
+    iw.addEventListener('dragleave',()=>iw.style.borderColor='');
+    iw.addEventListener('drop',e=>{e.preventDefault();iw.style.borderColor='';if(e.dataTransfer.files[0]){pendingId=r.id;handleFile(e.dataTransfer.files[0]);}});
+  }
+}
+
+fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(f&&pendingId)handleFile(f);fileInput.value='';});
+
+function handleFile(file){
+  if(!file.type.startsWith('image/'))return;
+  const img=new Image();
+  img.onload=()=>{
+    const max=1500;let w=img.width,h=img.height;const s=Math.min(1,max/Math.max(w,h));
+    w=Math.round(w*s);h=Math.round(h*s);
+    const c=document.createElement('canvas');c.width=w;c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    const url=c.toDataURL('image/jpeg',0.85);
+    renders[pendingId]=url; saveRender(pendingId,url); refreshDots();
+    if(selected===pendingId)renderPanel();
+    URL.revokeObjectURL(img.src);
+  };
+  img.src=URL.createObjectURL(file);
+}
+function clearRender(id){
+  delete renders[id];
+  if(hasStore){try{window.storage.delete('render:'+id,false);}catch(e){}}
+  refreshDots(); renderPanel();
+}
+function refreshDots(){
+  document.querySelectorAll('[data-dot]').forEach(d=>{
+    d.setAttribute('fill',renders[d.dataset.dot]?'#2f8f54':'#c9a33a');
+  });
+}
+async function saveRender(id,url){
+  if(!hasStore)return;
+  try{await window.storage.set('render:'+id,url,false);}
+  catch(e){console.error('save failed',e);}
+}
+async function loadRenders(){
+  if(!hasStore){document.getElementById('foot').textContent="Note: open this from the chat (not a downloaded copy) for renders to save between sessions.";return;}
+  for(const r of rooms){ if(r.zone!=="design")continue;
+    try{const res=await window.storage.get('render:'+r.id); if(res&&res.value)renders[r.id]=res.value;}catch(e){}
+  }
+  refreshDots(); if(selected)renderPanel();
+}
+
+select("living");
+loadRenders();
+</script>
+</body>
+</html>
