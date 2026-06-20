@@ -53,7 +53,7 @@
 <body>
 <header>
   <h1>Home Design Board</h1>
-  <div class="sub">Tap a room to see its design direction and palette. Add that room's render: save the image from the chat, then tap “Add render” on the room. Renders are saved on this device.</div>
+  <div class="sub">Tap a room to see its design direction, palette, and concept render. Want a different look for a room? Tap “Replace render” to drop in your own image.</div>
 </header>
 
 <div class="wrap">
@@ -101,8 +101,10 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const renders={};            // id -> dataURL
+const renders={};            // id -> dataURL (user uploads, saved on device)
 const hasStore = !!(window.storage && window.storage.get);
+// Every design room ships with a baked-in concept render; a user upload overrides it.
+const srcFor = r => renders[r.id] || (r.zone==="design" ? `renders/${r.id}.jpg` : null);
 
 /* ---- build plan ---- */
 const svg=document.getElementById('plan');
@@ -114,7 +116,7 @@ rooms.forEach(r=>{
   const cx=(r.x+r.w/2)*S, cy=(r.z+r.d/2)*S;
   const t=el("text",{x:cx,y:cy,"text-anchor":"middle","dominant-baseline":"middle"});
   t.textContent=r.n; g.appendChild(t);
-  if(r.zone==="design"){const dot=el("circle",{class:"dot",cx:r.x*S+16,cy:r.z*S+16,r:7,fill:"#c9a33a"});dot.dataset.dot=r.id;g.appendChild(dot);}
+  if(r.zone==="design"){const dot=el("circle",{class:"dot",cx:r.x*S+16,cy:r.z*S+16,r:7,fill:"#2f8f54"});dot.dataset.dot=r.id;g.appendChild(dot);}
   g.addEventListener("click",()=>select(r.id));
   svg.appendChild(g);
 });
@@ -132,16 +134,17 @@ function select(id){
 function renderPanel(){
   const r=rooms.find(x=>x.id===selected); if(!r)return;
   const area=(r.w*r.d).toFixed(1);
-  let html=`<h2>${r.n}${r.zone==="design"?`<span class="pill ${renders[r.id]?'done':'todo'}">${renders[r.id]?'render added':'no render'}</span>`:''}</h2>`;
+  const src=srcFor(r), mine=!!renders[r.id];
+  let html=`<h2>${r.n}${r.zone==="design"?`<span class="pill done">${mine?'your render':'concept render'}</span>`:''}</h2>`;
   html+=`<div class="dim">${r.w.toFixed(2)} × ${r.d.toFixed(2)} m · ≈ ${area} m²</div>`;
   if(r.zone==="design"){
     if(r.pal){html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}"></i>`).join('')}</div>`;}
     html+=`<div class="notes">${r.notes}</div>`;
-    html+=`<div class="imgwrap ${renders[r.id]?'has':''}" id="iw">
-      <img id="rimg" ${renders[r.id]?`src="${renders[r.id]}"`:''} alt="${r.n} render">
-      <div class="drop" ${renders[r.id]?'style="display:none"':''}>Drop the render here, or<br><b>tap “Add render”</b> below</div></div>`;
-    html+=`<div class="imgbtns"><button id="addbtn">${renders[r.id]?'Replace render':'Add render'}</button>`;
-    if(renders[r.id])html+=`<button class="ghost" id="clrbtn">Remove</button>`;
+    html+=`<div class="imgwrap ${src?'has':''}" id="iw">
+      <img id="rimg" ${src?`src="${src}"`:''} alt="${r.n} render">
+      <div class="drop" ${src?'style="display:none"':''}>Drop the render here, or<br><b>tap “Add render”</b> below</div></div>`;
+    html+=`<div class="imgbtns"><button id="addbtn">${src?'Replace render':'Add render'}</button>`;
+    if(mine)html+=`<button class="ghost" id="clrbtn">Reset to concept</button>`;
     html+=`</div>`;
   }else{
     html+=`<div class="notes">${r.notes}</div><div class="util">Utility zone — no design render.</div>`;
@@ -183,7 +186,7 @@ function clearRender(id){
 }
 function refreshDots(){
   document.querySelectorAll('[data-dot]').forEach(d=>{
-    d.setAttribute('fill',renders[d.dataset.dot]?'#2f8f54':'#c9a33a');
+    d.setAttribute('fill','#2f8f54');
   });
 }
 async function saveRender(id,url){
@@ -192,7 +195,7 @@ async function saveRender(id,url){
   catch(e){console.error('save failed',e);}
 }
 async function loadRenders(){
-  if(!hasStore){document.getElementById('foot').textContent="Note: open this from the chat (not a downloaded copy) for renders to save between sessions.";return;}
+  if(!hasStore){document.getElementById('foot').textContent="Showing concept renders. Your own uploads display now but only save between sessions inside the Claude app.";return;}
   for(const r of rooms){ if(r.zone!=="design")continue;
     try{const res=await window.storage.get('render:'+r.id); if(res&&res.value)renders[r.id]=res.value;}catch(e){}
   }
