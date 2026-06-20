@@ -22,6 +22,7 @@
   .room:hover rect{filter:brightness(.95)}
   .room.sel rect{stroke:var(--accent);stroke-width:6}
   .room text{font-size:15px;fill:#0c2434;pointer-events:none;font-weight:600}
+  .room text.badge{font-size:13px;fill:#1f7a44;font-weight:700}
   .dot{pointer-events:none}
 
   .detail{flex:1 1 320px;min-width:280px;background:var(--panel);border:1px solid var(--line);
@@ -111,7 +112,8 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const conceptSrc = id => `renders/${id}.jpg`;
+const VER="4"; // bump when renders are regenerated to bust browser cache
+const conceptSrc = id => `renders/${id}.jpg?v=${VER}`;
 // Pinned mood images per room, saved in this browser. { roomId: [dataURL, ...] }
 const MOOD_KEY="hp:moods";
 let moods = loadMoods();
@@ -128,10 +130,19 @@ rooms.forEach(r=>{
   const cx=(r.x+r.w/2)*S, cy=(r.z+r.d/2)*S;
   const t=el("text",{x:cx,y:cy,"text-anchor":"middle","dominant-baseline":"middle"});
   t.textContent=r.n; g.appendChild(t);
-  if(r.zone==="design"){const dot=el("circle",{class:"dot",cx:r.x*S+16,cy:r.z*S+16,r:7,fill:"#2f8f54"});dot.dataset.dot=r.id;g.appendChild(dot);}
+  if(r.zone==="design"){
+    const dot=el("circle",{class:"dot",cx:r.x*S+16,cy:r.z*S+16,r:7,fill:"#2f8f54"});dot.dataset.dot=r.id;g.appendChild(dot);
+    const badge=el("text",{class:"badge","data-badge":r.id,x:r.x*S+30,y:r.z*S+21});g.appendChild(badge);
+  }
   g.addEventListener("click",()=>select(r.id));
   svg.appendChild(g);
 });
+function updateBadges(){
+  rooms.forEach(r=>{ if(r.zone!=="design")return;
+    const n=(moods[r.id]||[]).length;
+    const t=svg.querySelector(`[data-badge="${r.id}"]`); if(t)t.textContent=n?`+${n}`:"";
+  });
+}
 
 /* ---- detail panel ---- */
 const detail=document.getElementById('detail');
@@ -199,12 +210,12 @@ async function addFiles(list,id){
   if(!saveMoods()){ arr.splice(arr.length-added,added); saveMoods();
     alert("This device's storage is full — couldn't save those images. Remove a few and try again."); }
   if(!arr.length)delete moods[id];
-  if(selected===id)renderPanel();
+  updateBadges(); if(selected===id)renderPanel();
 }
 function removePin(id,i){
   if(!moods[id])return;
   moods[id].splice(i,1); if(!moods[id].length)delete moods[id];
-  saveMoods(); if(selected===id)renderPanel();
+  saveMoods(); updateBadges(); if(selected===id)renderPanel();
 }
 
 /* ---- lightbox ---- */
@@ -212,6 +223,7 @@ function openLB(src){lb.querySelector('img').src=src;lb.classList.add('open');}
 lb.addEventListener('click',()=>lb.classList.remove('open'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open');});
 
+updateBadges();
 select("living");
 </script>
 </body>
