@@ -13,6 +13,7 @@
   header{padding:16px 18px 10px}
   h1{margin:0;font-size:15px;letter-spacing:.14em;text-transform:uppercase}
   .sub{font-size:11px;color:#5d7488;margin-top:4px;line-height:1.5;max-width:640px}
+  .bar{display:flex;gap:8px;margin-top:10px}
   .wrap{display:flex;gap:16px;padding:6px 16px 24px;align-items:flex-start;flex-wrap:wrap}
   .planbox{flex:1 1 420px;min-width:300px;background:var(--panel);border:1px solid var(--line);
     border-radius:12px;padding:12px}
@@ -64,6 +65,10 @@
 <header>
   <h1>Home Design Board</h1>
   <div class="sub">Tap a room for its warm-Japandi direction, palette, and concept render — then pin your own mood images to build a scrollable board of inspiration for each space.</div>
+  <div class="bar">
+    <button id="exp" title="Download all your boards as one file to share">⬇ Export board</button>
+    <button id="imp" title="Load a board file someone shared with you">⬆ Import board</button>
+  </div>
 </header>
 
 <div class="wrap">
@@ -77,6 +82,7 @@
 </div>
 <footer id="foot">Mood images you pin are saved on this device (this browser). Concept renders are built in.</footer>
 <input type="file" id="file" accept="image/*" multiple>
+<input type="file" id="impfile" accept="application/json,.json">
 <div class="lb" id="lb"><img alt="enlarged"></div>
 
 <script>
@@ -217,6 +223,34 @@ function removePin(id,i){
   moods[id].splice(i,1); if(!moods[id].length)delete moods[id];
   saveMoods(); updateBadges(); if(selected===id)renderPanel();
 }
+
+/* ---- share board: export / import (no backend, fully local) ---- */
+function exportBoard(){
+  if(!Object.keys(moods).length)return alert("Your boards are empty — pin some images first.");
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(moods)],{type:'application/json'}));
+  a.download='home-moodboard.json'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function mergeMoods(data){
+  if(!data||typeof data!=="object"||Array.isArray(data))return alert("That doesn't look like a board file.");
+  const before=JSON.stringify(moods); let added=0;
+  for(const id in data){ if(!Array.isArray(data[id]))continue;
+    const arr=moods[id]||(moods[id]=[]);
+    for(const u of data[id]){ if(typeof u==="string"&&u.startsWith("data:image")&&!arr.includes(u)){arr.push(u);added++;} }
+    if(!arr.length)delete moods[id];
+  }
+  if(!saveMoods()){ moods=JSON.parse(before); saveMoods();
+    return alert("Not enough storage on this device to import that whole board. Remove a few images and try again."); }
+  updateBadges(); if(selected)renderPanel();
+  alert(added?`Imported ${added} image${added>1?'s':''} into your boards.`:"Nothing new — those images are already on your boards.");
+}
+const impInput=document.getElementById('impfile');
+document.getElementById('exp').onclick=exportBoard;
+document.getElementById('imp').onclick=()=>impInput.click();
+impInput.addEventListener('change',e=>{const f=e.target.files[0];
+  if(f){const fr=new FileReader();fr.onload=()=>{try{mergeMoods(JSON.parse(fr.result));}catch(err){alert("Couldn't read that file.");}};fr.readAsText(f);}
+  impInput.value='';});
 
 /* ---- lightbox ---- */
 function openLB(src){lb.querySelector('img').src=src;lb.classList.add('open');}
