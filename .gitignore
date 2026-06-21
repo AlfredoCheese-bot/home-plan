@@ -2,3 +2,5 @@
 *.log
 .gemini_key
 .env
+renders/_*.jpg
+renders/_*.png

@@ -125,6 +125,15 @@ const MOOD_KEY="hp:moods";
 let moods = loadMoods();
 function loadMoods(){try{return JSON.parse(localStorage.getItem(MOOD_KEY))||{};}catch(e){return {};}}
 function saveMoods(){try{localStorage.setItem(MOOD_KEY,JSON.stringify(moods));return true;}catch(e){return false;}}
+// Shared inspiration images committed under inspiration/<roomId>/, listed in manifest.json.
+// These are visible to everyone on the link AND readable by Claude. { roomId: [filename, ...] }
+let shared = {};
+const sharedSrc = (id,f) => `inspiration/${id}/${encodeURIComponent(f)}?v=${VER}`;
+async function loadShared(){
+  try{ const r=await fetch(`inspiration/manifest.json?t=${Date.now()}`); shared = r.ok ? await r.json() : {}; }
+  catch(e){ shared={}; }
+  updateBadges(); if(selected) renderPanel();
+}
 
 /* ---- build plan ---- */
 const svg=document.getElementById('plan');
@@ -145,7 +154,7 @@ rooms.forEach(r=>{
 });
 function updateBadges(){
   rooms.forEach(r=>{ if(r.zone!=="design")return;
-    const n=(moods[r.id]||[]).length;
+    const n=(shared[r.id]||[]).length + (moods[r.id]||[]).length;
     const t=svg.querySelector(`[data-badge="${r.id}"]`); if(t)t.textContent=n?`+${n}`:"";
   });
 }
@@ -173,16 +182,18 @@ function renderPanel(){
       `<div class="util">Utility zone — no design board.</div>`;
     return;
   }
-  const pins=moods[r.id]||[];
+  const pins=moods[r.id]||[], shList=shared[r.id]||[];
+  const total=shList.length+pins.length;
   let html=`<h2>${r.n}</h2>${dim}`;
   html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div>`;
   html+=`<div class="notes">${r.notes}</div>`;
   html+=`<div class="boardbar"><span>Inspiration board</span><button id="addbtn">+ Add images</button></div>`;
   html+=`<div class="board" id="board">`;
   html+=`<figure class="pin"><img src="${conceptSrc(r.id)}" alt="${esc(r.n)} concept render"><figcaption>concept render</figcaption></figure>`;
+  shList.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${sharedSrc(r.id,f)}" alt="inspiration ${i+1}" loading="lazy"><figcaption>inspiration</figcaption></figure>`; });
   pins.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="mood ${i+1}"><button class="rm" data-i="${i}" title="Remove" aria-label="Remove image">×</button></figure>`; });
   html+=`</div>`;
-  html+=`<div class="hint" id="drophint">Tap <b>+ Add images</b> or drop photos here to pin inspiration${pins.length?` — ${pins.length} pinned`:''}. Tap any image to enlarge.</div>`;
+  html+=`<div class="hint" id="drophint">Shared pins appear for everyone${total?` — ${total} on this board`:''}. Tap <b>+ Add images</b> to pin extras on this device, or tap any image to enlarge.</div>`;
   detail.innerHTML=html;
 
   document.getElementById('addbtn').onclick=()=>fileInput.click();
@@ -259,6 +270,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove(
 
 updateBadges();
 select("living");
+loadShared();
 </script>
 </body>
 </html>
