@@ -216,7 +216,8 @@ function renderPanel(){
 
   document.getElementById('addbtn').onclick=()=>fileInput.click();
   const boardEl=document.getElementById('board');
-  boardEl.querySelectorAll('img').forEach(im=>im.addEventListener('click',()=>openLB(im.src)));
+  // lightbox on EVERY image in the panel — concepts and inspirations alike
+  detail.querySelectorAll('.pin img').forEach(im=>im.addEventListener('click',()=>openLB(im.src)));
   boardEl.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i);}));
   [boardEl,document.getElementById('drophint')].forEach(zone=>{
     zone.addEventListener('dragover',e=>{e.preventDefault();boardEl.classList.add('drag');});
