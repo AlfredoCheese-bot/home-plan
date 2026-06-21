@@ -73,7 +73,7 @@
 <body>
 <header>
   <h1>Home Design Board</h1>
-  <div class="sub">Tap a room to see its <b>Concept</b> (the design we burned from the references) and its <b>Inspirations</b> board. Add your own inspiration pins anytime.</div>
+  <div class="sub">Tap a room for its <b>Concept</b> (the design burned from the references), its <b>Inspirations</b> board, and <b>Furniture &amp; Fittings</b> — where you collect the actual pieces. Add your own pins anytime.</div>
   <div class="bar">
     <button id="exp" title="Download all your boards as one file to share">⬇ Export board</button>
     <button id="imp" title="Load a board file someone shared with you">⬆ Import board</button>
@@ -140,11 +140,17 @@ async function loadBoard(){
   catch(e){ board={}; }
   updateBadges(); if(selected) renderPanel();
 }
-// Personal mood pins, saved in this browser only. { roomId: [dataURL, ...] }
-const MOOD_KEY="hp:moods";
-let moods = loadMoods();
-function loadMoods(){try{return JSON.parse(localStorage.getItem(MOOD_KEY))||{};}catch(e){return {};}}
-function saveMoods(){try{localStorage.setItem(MOOD_KEY,JSON.stringify(moods));return true;}catch(e){return false;}}
+const furnSrc = (id,f) => `furniture/${id}/${encodeURIComponent(f)}?v=${VER}`;
+// Personal pins saved in this browser only, per section.
+const MOOD_KEY="hp:moods", FURN_KEY="hp:furn";
+function loadJSON(k){try{return JSON.parse(localStorage.getItem(k))||{};}catch(e){return {};}}
+function saveJSON(k,o){try{localStorage.setItem(k,JSON.stringify(o));return true;}catch(e){return false;}}
+let moods = loadJSON(MOOD_KEY);   // personal inspirations
+let furn  = loadJSON(FURN_KEY);   // personal furniture & fittings
+function saveMoods(){return saveJSON(MOOD_KEY,moods);}   // used by export/import
+let addTarget="insp";            // which section the file picker adds to
+// "camel-leather-sofa.jpg" -> "camel leather sofa"
+function niceName(f){return f.replace(/\.[a-z0-9]+$/i,"").replace(/^\d+[-_]?/,"").replace(/[-_]+/g," ").trim();}
 
 /* ---- build plan ---- */
 const svg=document.getElementById('plan');
@@ -165,7 +171,8 @@ rooms.forEach(r=>{
 });
 function updateBadges(){
   rooms.forEach(r=>{ if(r.zone!=="design")return;
-    const n=((board[r.id]||{}).inspirations||[]).length + (moods[r.id]||[]).length;
+    const bd=board[r.id]||{};
+    const n=(bd.inspirations||[]).length+(moods[r.id]||[]).length+(bd.furniture||[]).length+(furn[r.id]||[]).length;
     const t=svg.querySelector(`[data-badge="${r.id}"]`); if(t)t.textContent=n?`+${n}`:"";
   });
 }
@@ -194,6 +201,7 @@ function renderPanel(){
     return;
   }
   const b=board[r.id]||{}, concepts=b.concepts||[], inspos=b.inspirations||[], personal=moods[r.id]||[];
+  const furnList=b.furniture||[], pFurn=furn[r.id]||[];
   let html=`<h2>${r.n}</h2>${dim}`;
   html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div>`;
   html+=`<div class="notes">${r.notes}</div>`;
@@ -210,28 +218,37 @@ function renderPanel(){
   html+=`<div class="seclabel"><span class="sec-t">Inspirations</span><button id="addbtn">+ Add</button></div>`;
   html+=`<div class="board" id="board">`;
   inspos.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${inspoSrc(r.id,f)}" alt="inspiration ${i+1}" loading="lazy"></figure>`; });
-  personal.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="mood ${i+1}"><button class="rm" data-i="${i}" title="Remove" aria-label="Remove image">×</button></figure>`; });
+  personal.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="mood ${i+1}"><button class="rm" data-i="${i}" data-store="insp" title="Remove" aria-label="Remove image">×</button></figure>`; });
   html+=`</div>`;
   if(!inspos.length&&!personal.length) html+=`<div class="empty">No inspirations yet — tap “+ Add”.</div>`;
+
+  // ---- Furniture & Fittings section ----
+  html+=`<div class="seclabel"><span class="sec-t">Furniture &amp; Fittings</span><button id="addfurn">+ Add</button></div>`;
+  html+=`<div class="board" id="furnboard">`;
+  furnList.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${furnSrc(r.id,f)}" alt="${esc(niceName(f))}" loading="lazy"><figcaption>${esc(niceName(f))}</figcaption></figure>`; });
+  pFurn.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="furniture ${i+1}"><button class="rm" data-i="${i}" data-store="furn" title="Remove" aria-label="Remove image">×</button></figure>`; });
+  html+=`</div>`;
+  if(!furnList.length&&!pFurn.length) html+=`<div class="empty">No pieces yet — tap “+ Add” to collect possible furniture &amp; fittings.</div>`;
   html+=`<div class="hint" id="drophint">Shared pins show for everyone. Tap <b>+ Add</b> (or drop images) to pin extras on this device. Tap any image to enlarge.</div>`;
   detail.innerHTML=html;
 
-  document.getElementById('addbtn').onclick=()=>fileInput.click();
-  const boardEl=document.getElementById('board');
-  // lightbox on EVERY image in the panel — concepts and inspirations alike
+  document.getElementById('addbtn').onclick=()=>{addTarget='insp';fileInput.click();};
+  document.getElementById('addfurn').onclick=()=>{addTarget='furn';fileInput.click();};
+  const boardEl=document.getElementById('board'), furnEl=document.getElementById('furnboard');
+  // lightbox + error state on EVERY image in the panel
   detail.querySelectorAll('.pin img').forEach(im=>{
     im.addEventListener('click',()=>openLB(im.src));
     im.addEventListener('error',()=>{const p=im.parentNode;p.classList.add('imgfail');p.setAttribute('data-fail',im.getAttribute('src'));});
   });
-  boardEl.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i);}));
-  [boardEl,document.getElementById('drophint')].forEach(zone=>{
-    zone.addEventListener('dragover',e=>{e.preventDefault();boardEl.classList.add('drag');});
-    zone.addEventListener('dragleave',()=>boardEl.classList.remove('drag'));
-    zone.addEventListener('drop',e=>{e.preventDefault();boardEl.classList.remove('drag');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files,r.id);});
+  detail.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i,b.dataset.store);}));
+  [[boardEl,'insp'],[furnEl,'furn']].forEach(([zone,tg])=>{
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+    zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+    zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files,r.id,tg);});
   });
 }
 
-fileInput.addEventListener('change',e=>{if(e.target.files.length&&selected)addFiles(e.target.files,selected);fileInput.value='';});
+fileInput.addEventListener('change',e=>{if(e.target.files.length&&selected)addFiles(e.target.files,selected,addTarget);fileInput.value='';});
 
 function compressImage(file,max=1200,q=0.8){
   return new Promise((res,rej)=>{
@@ -245,18 +262,20 @@ function compressImage(file,max=1200,q=0.8){
     img.onerror=rej;img.src=URL.createObjectURL(file);
   });
 }
-async function addFiles(list,id){
-  const arr=moods[id]||(moods[id]=[]); let added=0;
+async function addFiles(list,id,target){
+  const isF=target==='furn', store=isF?furn:moods, key=isF?FURN_KEY:MOOD_KEY;
+  const arr=store[id]||(store[id]=[]); let added=0;
   for(const f of list){ try{arr.push(await compressImage(f)); added++;}catch(e){} }
-  if(!saveMoods()){ arr.splice(arr.length-added,added); saveMoods();
+  if(!saveJSON(key,store)){ arr.splice(arr.length-added,added); saveJSON(key,store);
     alert("This device's storage is full — couldn't save those images. Remove a few and try again."); }
-  if(!arr.length)delete moods[id];
+  if(!arr.length)delete store[id];
   updateBadges(); if(selected===id)renderPanel();
 }
-function removePin(id,i){
-  if(!moods[id])return;
-  moods[id].splice(i,1); if(!moods[id].length)delete moods[id];
-  saveMoods(); updateBadges(); if(selected===id)renderPanel();
+function removePin(id,i,target){
+  const isF=target==='furn', store=isF?furn:moods, key=isF?FURN_KEY:MOOD_KEY;
+  if(!store[id])return;
+  store[id].splice(i,1); if(!store[id].length)delete store[id];
+  saveJSON(key,store); updateBadges(); if(selected===id)renderPanel();
 }
 
 /* ---- share board: export / import (no backend, fully local) ---- */

@@ -10,9 +10,11 @@ exts = (".jpg",".jpeg",".png",".webp")
 def ls(p): return sorted(f for f in os.listdir(p) if f.lower().endswith(exts)) if os.path.isdir(p) else []
 m = {}
 for r in rooms:
-    c, i = ls(os.path.join("concept", r)), ls(os.path.join("inspiration", r))
-    if c or i:
-        m[r] = {"concepts": c, "inspirations": i}
+    c  = ls(os.path.join("concept", r))
+    i  = ls(os.path.join("inspiration", r))
+    fu = ls(os.path.join("furniture", r))
+    if c or i or fu:
+        m[r] = {"concepts": c, "inspirations": i, "furniture": fu}
 json.dump(m, open("board.json", "w"), indent=2)
 print(json.dumps(m, indent=2))
 PY

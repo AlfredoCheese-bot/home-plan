@@ -3,25 +3,29 @@
     "concepts": [
       "master.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   },
   "ensuite": {
     "concepts": [
       "ensuite.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   },
   "bed2": {
     "concepts": [
       "bed2.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   },
   "bed3": {
     "concepts": [
       "bed3.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   },
   "living": {
     "concepts": [
@@ -40,18 +44,21 @@
       "living-08-canvas-panel-ceiling.jpg",
       "living-09-walnut-canvas-bay.jpg",
       "living-10-washi-grid-apartment.jpg"
-    ]
+    ],
+    "furniture": []
   },
   "ensbath": {
     "concepts": [
       "ensbath.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   },
   "kitchen": {
     "concepts": [
       "kitchen.jpg"
     ],
-    "inspirations": []
+    "inspirations": [],
+    "furniture": []
   }
 }
