@@ -1,0 +1,56 @@
+{
+  "master": {
+    "concepts": [
+      "master.jpg"
+    ],
+    "inspirations": []
+  },
+  "ensuite": {
+    "concepts": [
+      "ensuite.jpg"
+    ],
+    "inspirations": []
+  },
+  "bed2": {
+    "concepts": [
+      "bed2.jpg"
+    ],
+    "inspirations": []
+  },
+  "bed3": {
+    "concepts": [
+      "bed3.jpg"
+    ],
+    "inspirations": []
+  },
+  "living": {
+    "concepts": [
+      "living-1-moody.jpg",
+      "living-2-walnut-lounge.jpg"
+    ],
+    "inspirations": [
+      "living-01-japandi-palette.jpg",
+      "living-02-moody-shoji-pendant.jpg",
+      "living-03-backlit-grid.jpg",
+      "living-04-walnut-canvas-bay.jpg",
+      "living-05-walnut-lounge.jpg",
+      "living-06-mucha-red-grid.jpg",
+      "living-07-slat-light-lounge.jpg",
+      "living-08-canvas-panel-ceiling.jpg",
+      "living-09-walnut-canvas-bay.jpg",
+      "living-10-washi-grid-apartment.jpg"
+    ]
+  },
+  "ensbath": {
+    "concepts": [
+      "ensbath.jpg"
+    ],
+    "inspirations": []
+  },
+  "kitchen": {
+    "concepts": [
+      "kitchen.jpg"
+    ],
+    "inspirations": []
+  }
+}

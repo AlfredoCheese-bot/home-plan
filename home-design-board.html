@@ -33,8 +33,15 @@
   .swatches{display:flex;gap:6px;margin-bottom:12px}
   .swatches i{width:26px;height:26px;border-radius:5px;border:1px solid rgba(0,0,0,.12)}
   .notes{font-size:12px;line-height:1.6;color:#26414f;margin-bottom:14px}
-  .boardbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 10px}
-  .boardbar span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#5d7488}
+  .seclabel{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+    margin:18px 0 9px;padding-top:12px;border-top:1px solid var(--line)}
+  .sec-t{font-size:12px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--ink)}
+  .sec-s{font-size:10px;color:#8aa0ad;letter-spacing:.02em}
+  .empty{font-size:11px;color:#8aa0ad;padding:4px 0 6px}
+  .concepts{columns:1}
+  .pin.concept{border:1.5px solid var(--accent)}
+  .pin.concept figcaption{background:linear-gradient(transparent,rgba(27,110,194,.78));
+    letter-spacing:.1em;font-weight:600}
   button{font:inherit;font-size:12px;padding:7px 11px;border:1px solid var(--line);background:#fff;
     color:var(--ink);border-radius:7px;cursor:pointer}
   button:hover{border-color:var(--accent);color:var(--accent)}
@@ -64,7 +71,7 @@
 <body>
 <header>
   <h1>Home Design Board</h1>
-  <div class="sub">Tap a room for its warm-Japandi direction, palette, and concept render — then pin your own mood images to build a scrollable board of inspiration for each space.</div>
+  <div class="sub">Tap a room to see its <b>Concept</b> (the design we burned from the references) and its <b>Inspirations</b> board. Add your own inspiration pins anytime.</div>
   <div class="bar">
     <button id="exp" title="Download all your boards as one file to share">⬇ Export board</button>
     <button id="imp" title="Load a board file someone shared with you">⬆ Import board</button>
@@ -118,22 +125,24 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="7"; // bump when renders are regenerated to bust browser cache
-const conceptSrc = id => `renders/${id}.jpg?v=${VER}`;
-// Pinned mood images per room, saved in this browser. { roomId: [dataURL, ...] }
+const VER="8"; // bump when committed images change, to bust browser cache
+// Board data committed in the repo (so it's shared with everyone AND readable by Claude):
+//   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
+//   concepts    = the burned design renders (concept/<roomId>/)
+//   inspirations = the reference mood images (inspiration/<roomId>/)
+let board = {};
+const conceptSrc = (id,f) => `concept/${id}/${encodeURIComponent(f)}?v=${VER}`;
+const inspoSrc   = (id,f) => `inspiration/${id}/${encodeURIComponent(f)}?v=${VER}`;
+async function loadBoard(){
+  try{ const r=await fetch(`board.json?t=${Date.now()}`); board = r.ok ? await r.json() : {}; }
+  catch(e){ board={}; }
+  updateBadges(); if(selected) renderPanel();
+}
+// Personal mood pins, saved in this browser only. { roomId: [dataURL, ...] }
 const MOOD_KEY="hp:moods";
 let moods = loadMoods();
 function loadMoods(){try{return JSON.parse(localStorage.getItem(MOOD_KEY))||{};}catch(e){return {};}}
 function saveMoods(){try{localStorage.setItem(MOOD_KEY,JSON.stringify(moods));return true;}catch(e){return false;}}
-// Shared inspiration images committed under inspiration/<roomId>/, listed in manifest.json.
-// These are visible to everyone on the link AND readable by Claude. { roomId: [filename, ...] }
-let shared = {};
-const sharedSrc = (id,f) => `inspiration/${id}/${encodeURIComponent(f)}?v=${VER}`;
-async function loadShared(){
-  try{ const r=await fetch(`inspiration/manifest.json?t=${Date.now()}`); shared = r.ok ? await r.json() : {}; }
-  catch(e){ shared={}; }
-  updateBadges(); if(selected) renderPanel();
-}
 
 /* ---- build plan ---- */
 const svg=document.getElementById('plan');
@@ -154,7 +163,7 @@ rooms.forEach(r=>{
 });
 function updateBadges(){
   rooms.forEach(r=>{ if(r.zone!=="design")return;
-    const n=(shared[r.id]||[]).length + (moods[r.id]||[]).length;
+    const n=((board[r.id]||{}).inspirations||[]).length + (moods[r.id]||[]).length;
     const t=svg.querySelector(`[data-badge="${r.id}"]`); if(t)t.textContent=n?`+${n}`:"";
   });
 }
@@ -182,18 +191,27 @@ function renderPanel(){
       `<div class="util">Utility zone — no design board.</div>`;
     return;
   }
-  const pins=moods[r.id]||[], shList=shared[r.id]||[];
-  const total=shList.length+pins.length;
+  const b=board[r.id]||{}, concepts=b.concepts||[], inspos=b.inspirations||[], personal=moods[r.id]||[];
   let html=`<h2>${r.n}</h2>${dim}`;
   html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div>`;
   html+=`<div class="notes">${r.notes}</div>`;
-  html+=`<div class="boardbar"><span>Inspiration board</span><button id="addbtn">+ Add images</button></div>`;
+
+  // ---- Concept section (burned from the inspirations) ----
+  html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${concepts.length>1?concepts.length+' options · ':''}burned from inspirations</span></div>`;
+  if(concepts.length){
+    html+=`<div class="board concepts">`;
+    concepts.forEach((f,i)=>{ html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}" loading="lazy"><figcaption>concept${concepts.length>1?' '+(i+1):''}</figcaption></figure>`; });
+    html+=`</div>`;
+  } else { html+=`<div class="empty">No concept generated yet.</div>`; }
+
+  // ---- Inspirations section ----
+  html+=`<div class="seclabel"><span class="sec-t">Inspirations</span><button id="addbtn">+ Add</button></div>`;
   html+=`<div class="board" id="board">`;
-  html+=`<figure class="pin"><img src="${conceptSrc(r.id)}" alt="${esc(r.n)} concept render"><figcaption>concept render</figcaption></figure>`;
-  shList.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${sharedSrc(r.id,f)}" alt="inspiration ${i+1}" loading="lazy"><figcaption>inspiration</figcaption></figure>`; });
-  pins.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="mood ${i+1}"><button class="rm" data-i="${i}" title="Remove" aria-label="Remove image">×</button></figure>`; });
+  inspos.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${inspoSrc(r.id,f)}" alt="inspiration ${i+1}" loading="lazy"></figure>`; });
+  personal.forEach((u,i)=>{ html+=`<figure class="pin"><img src="${u}" alt="mood ${i+1}"><button class="rm" data-i="${i}" title="Remove" aria-label="Remove image">×</button></figure>`; });
   html+=`</div>`;
-  html+=`<div class="hint" id="drophint">Shared pins appear for everyone${total?` — ${total} on this board`:''}. Tap <b>+ Add images</b> to pin extras on this device, or tap any image to enlarge.</div>`;
+  if(!inspos.length&&!personal.length) html+=`<div class="empty">No inspirations yet — tap “+ Add”.</div>`;
+  html+=`<div class="hint" id="drophint">Shared pins show for everyone. Tap <b>+ Add</b> (or drop images) to pin extras on this device. Tap any image to enlarge.</div>`;
   detail.innerHTML=html;
 
   document.getElementById('addbtn').onclick=()=>fileInput.click();
@@ -270,7 +288,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove(
 
 updateBadges();
 select("living");
-loadShared();
+loadBoard();
 </script>
 </body>
 </html>

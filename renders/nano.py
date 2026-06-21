@@ -59,7 +59,13 @@ def main():
         sys.exit("Provide --room or --out for the output path.")
 
     parts = [{"text": args.prompt}] + [part_for_image(r) for r in args.ref]
-    body = json.dumps({"contents": [{"parts": parts}]}).encode()
+    payload = {"contents": [{"parts": parts}]}
+    # Optional higher-res output (Nano Banana Pro): NANO_SIZE=1K|2K|4K, NANO_AR=4:3 etc.
+    img_cfg = {}
+    if os.environ.get("NANO_SIZE"): img_cfg["imageSize"] = os.environ["NANO_SIZE"]
+    if os.environ.get("NANO_AR"): img_cfg["aspectRatio"] = os.environ["NANO_AR"]
+    if img_cfg: payload["generationConfig"] = {"imageConfig": img_cfg}
+    body = json.dumps(payload).encode()
     url = (f"https://generativelanguage.googleapis.com/v1beta/models/"
            f"{MODEL}:generateContent?key={load_key()}")
     req = urllib.request.Request(url, data=body,
