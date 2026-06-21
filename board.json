@@ -63,7 +63,9 @@
     "furniture": []
   },
   "kitchen": {
-    "actual": [],
+    "actual": [
+      "kitchen-before.jpg"
+    ],
     "concepts": [
       "kitchen.jpg"
     ],
