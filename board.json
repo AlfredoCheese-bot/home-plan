@@ -1,5 +1,6 @@
 {
   "master": {
+    "actual": [],
     "concepts": [
       "master.jpg"
     ],
@@ -7,6 +8,7 @@
     "furniture": []
   },
   "ensuite": {
+    "actual": [],
     "concepts": [
       "ensuite.jpg"
     ],
@@ -14,6 +16,7 @@
     "furniture": []
   },
   "bed2": {
+    "actual": [],
     "concepts": [
       "bed2.jpg"
     ],
@@ -21,6 +24,7 @@
     "furniture": []
   },
   "bed3": {
+    "actual": [],
     "concepts": [
       "bed3.jpg"
     ],
@@ -28,13 +32,15 @@
     "furniture": []
   },
   "living": {
+    "actual": [
+      "living-before-reno.jpg"
+    ],
     "concepts": [
       "living-1-moody.jpg",
       "living-2-walnut-lounge-r2.jpg",
       "living-3-skylight-calm.jpg"
     ],
     "inspirations": [
-      "00-actual-room-before-reno.jpg",
       "living-01-japandi-palette.jpg",
       "living-02-moody-shoji-pendant.jpg",
       "living-03-backlit-grid.jpg",
@@ -49,6 +55,7 @@
     "furniture": []
   },
   "ensbath": {
+    "actual": [],
     "concepts": [
       "ensbath.jpg"
     ],
@@ -56,6 +63,7 @@
     "furniture": []
   },
   "kitchen": {
+    "actual": [],
     "concepts": [
       "kitchen.jpg"
     ],

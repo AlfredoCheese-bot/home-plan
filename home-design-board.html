@@ -75,7 +75,7 @@
 <body>
 <header>
   <h1>Home Design Board</h1>
-  <div class="sub">Tap a room for its <b>Concept</b> (the design burned from the references), its <b>Inspirations</b> board, and <b>Furniture &amp; Fittings</b> — where you collect the actual pieces. Add your own pins anytime.</div>
+  <div class="sub">Tap a room: <b>Actual Space</b> (the real room), the <b>Concept</b> (design burned from references), the <b>Inspirations</b> board, and <b>Furniture &amp; Fittings</b>. Add your own pins anytime.</div>
   <div class="bar"><span class="synced" id="sync">◍ Live sync — everyone with the link shares this board</span></div>
 </header>
 
@@ -132,6 +132,7 @@ const VER="10"; // bump when committed images change, to bust browser cache
 //   concepts    = the burned design renders (concept/<roomId>/)
 //   inspirations = the reference mood images (inspiration/<roomId>/)
 let board = {};
+const actualSrc  = (id,f) => `actual/${id}/${encodeURIComponent(f)}?v=${VER}`;
 const conceptSrc = (id,f) => `concept/${id}/${encodeURIComponent(f)}?v=${VER}`;
 const inspoSrc   = (id,f) => `inspiration/${id}/${encodeURIComponent(f)}?v=${VER}`;
 async function loadBoard(){
@@ -221,12 +222,20 @@ function renderPanel(){
       `<div class="util">Utility zone — no design board.</div>`;
     return;
   }
-  const b=board[r.id]||{}, concepts=b.concepts||[], inspos=b.inspirations||[];
+  const b=board[r.id]||{}, actualList=b.actual||[], concepts=b.concepts||[], inspos=b.inspirations||[];
   const furnList=b.furniture||[];
   const rInsp=remoteList(r.id,'inspiration'), rFurn=remoteList(r.id,'furniture');
   let html=`<h2>${r.n}</h2>${dim}`;
   html+=`<div class="swatches">${r.pal.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div>`;
   html+=`<div class="notes">${r.notes}</div>`;
+
+  // ---- Actual Space section (the real room) ----
+  html+=`<div class="seclabel"><span class="sec-t">Actual Space</span><span class="sec-s">the real room</span></div>`;
+  if(actualList.length){
+    html+=`<div class="board concepts">`;
+    actualList.forEach(f=>{ html+=`<figure class="pin"><img src="${actualSrc(r.id,f)}" alt="actual space" loading="lazy"><figcaption>${esc(niceName(f))}</figcaption></figure>`; });
+    html+=`</div>`;
+  } else { html+=`<div class="empty">No photo of the actual space yet.</div>`; }
 
   // ---- Concept section (burned from the inspirations) ----
   html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${concepts.length>1?concepts.length+' options · ':''}burned from inspirations</span></div>`;
