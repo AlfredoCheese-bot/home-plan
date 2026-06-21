@@ -215,13 +215,13 @@ function renderPanel(){
   detail.innerHTML=html;
 
   document.getElementById('addbtn').onclick=()=>fileInput.click();
-  const board=document.getElementById('board');
-  board.querySelectorAll('img').forEach(im=>im.addEventListener('click',()=>openLB(im.src)));
-  board.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i);}));
-  [board,document.getElementById('drophint')].forEach(zone=>{
-    zone.addEventListener('dragover',e=>{e.preventDefault();board.classList.add('drag');});
-    zone.addEventListener('dragleave',()=>board.classList.remove('drag'));
-    zone.addEventListener('drop',e=>{e.preventDefault();board.classList.remove('drag');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files,r.id);});
+  const boardEl=document.getElementById('board');
+  boardEl.querySelectorAll('img').forEach(im=>im.addEventListener('click',()=>openLB(im.src)));
+  boardEl.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i);}));
+  [boardEl,document.getElementById('drophint')].forEach(zone=>{
+    zone.addEventListener('dragover',e=>{e.preventDefault();boardEl.classList.add('drag');});
+    zone.addEventListener('dragleave',()=>boardEl.classList.remove('drag'));
+    zone.addEventListener('drop',e=>{e.preventDefault();boardEl.classList.remove('drag');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files,r.id);});
   });
 }
 
