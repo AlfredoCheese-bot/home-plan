@@ -39,6 +39,9 @@
   .sec-s{font-size:10px;color:#8aa0ad;letter-spacing:.02em}
   .empty{font-size:11px;color:#8aa0ad;padding:4px 0 6px}
   .board.concepts{columns:1}
+  .pin.imgfail{min-height:90px}
+  .pin.imgfail::after{content:"⚠ image failed: " attr(data-fail);display:block;
+    padding:10px;font-size:10px;color:#b00020;word-break:break-all;background:#fdecea}
   .pin.concept{border:1.5px solid var(--accent)}
   .pin.concept figcaption{background:linear-gradient(transparent,rgba(27,110,194,.78));
     letter-spacing:.1em;font-weight:600}
@@ -200,7 +203,7 @@ function renderPanel(){
   html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${concepts.length>1?concepts.length+' options · ':''}burned from inspirations</span></div>`;
   if(concepts.length){
     html+=`<div class="board concepts">`;
-    concepts.forEach((f,i)=>{ html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}" loading="lazy"><figcaption>concept${concepts.length>1?' '+(i+1):''}</figcaption></figure>`; });
+    concepts.forEach((f,i)=>{ html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}"><figcaption>concept${concepts.length>1?' '+(i+1):''}</figcaption></figure>`; });
     html+=`</div>`;
   } else { html+=`<div class="empty">No concept generated yet.</div>`; }
 
@@ -217,7 +220,10 @@ function renderPanel(){
   document.getElementById('addbtn').onclick=()=>fileInput.click();
   const boardEl=document.getElementById('board');
   // lightbox on EVERY image in the panel — concepts and inspirations alike
-  detail.querySelectorAll('.pin img').forEach(im=>im.addEventListener('click',()=>openLB(im.src)));
+  detail.querySelectorAll('.pin img').forEach(im=>{
+    im.addEventListener('click',()=>openLB(im.src));
+    im.addEventListener('error',()=>{const p=im.parentNode;p.classList.add('imgfail');p.setAttribute('data-fail',im.getAttribute('src'));});
+  });
   boardEl.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(r.id,+b.dataset.i);}));
   [boardEl,document.getElementById('drophint')].forEach(zone=>{
     zone.addEventListener('dragover',e=>{e.preventDefault();boardEl.classList.add('drag');});
