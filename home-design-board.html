@@ -46,6 +46,9 @@
   .pin.imgfail::after{content:"image unavailable";display:block;padding:16px;font-size:11px;
     color:var(--muted);background:#faf8f4;font-style:italic}
   .pin.concept figcaption{letter-spacing:.18em}
+  .concept-notes{font-size:12px;line-height:1.7;color:#5a5449;padding:11px 13px 13px;background:#faf8f4;border-top:1px solid var(--line)}
+  .concept-notes b{font-weight:600;color:#3a3530}
+  .concept-notes em{font-style:italic}
   button{font:inherit;font-family:var(--sans);font-size:11px;letter-spacing:.04em;padding:9px 15px;
     border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:2px;cursor:pointer;transition:.14s}
   button:hover{border-color:var(--ink)}
@@ -111,7 +114,15 @@ const rooms=[
   notes:"Deep cobalt-blue feature wall, walnut bed frame and joinery, a mustard throw, a mid-century lamp, warm dim lighting and walnut floor."},
  {id:"living",n:"LIVING / DINING",x:8.585,z:0,w:3.765,d:6.81,cat:"live",zone:"design",hero:true,
   pal:["#9aa88f","#5a3d29","#46503f","#e8e0d4"],
-  notes:"Sage-green sofa, dark walnut floor, cream-stone tables, rice-paper lantern pendants, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs."},
+  notes:"Sage-green sofa, dark walnut floor, cream-stone tables, rice-paper lantern pendants, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs.",
+  conceptMeta:[
+   {name:"Moody Grid",
+    notes:"Elongated washi-grid ceiling panel running toward the camera. Warm evening ambiance, beige walls, low furniture. <b>Ask ID firm:</b> panel lighting temperature (2700–3000 K recommended), dimmability, frame material."},
+   {name:"Walnut Lounge",
+    notes:"Tan leather sofa, walnut joinery, slat pendant over dining. TV left, sofa right, 8-seat dining at window end. <b>Ask ID firm:</b> walnut veneer vs solid for joinery, leather grade for tropical humidity."},
+   {name:"Skylight Calm",
+    notes:"Seamless stretched-fabric ceiling light panel, pale oak, bouclé sofa. <b>Concern — bugs:</b> tropical insects are drawn to warm backlit panels. Counter: insist on a sealed aluminium extrusion frame with zero-gap perimeter gasket, LED strip (not fluorescent — cooler, less UV), and a <em>removable panel</em> for periodic cleaning. A well-sealed install is effectively bug-proof; ask the ID firm to spec this explicitly. Also confirm panel is rated IP4X minimum to handle Singapore humidity."}
+  ]},
  {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.60,d:1.83,cat:"wet",zone:"design",
   pal:["#46503f","#5a3d29","#e8e0d4","#b08d57"],
   notes:"Walnut accents, muted-green stone tile, cream stone counter, brass fixtures, a round mirror and warm moody lighting."},
@@ -242,7 +253,12 @@ function renderPanel(){
   html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${concepts.length>1?concepts.length+' options · ':''}burned from inspirations</span></div>`;
   if(concepts.length){
     html+=`<div class="board concepts">`;
-    concepts.forEach((f,i)=>{ html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}"><figcaption>concept${concepts.length>1?' '+(i+1):''}</figcaption></figure>`; });
+    concepts.forEach((f,i)=>{
+      const meta = r.conceptMeta && r.conceptMeta[i];
+      const cap  = meta ? meta.name : (concepts.length>1 ? 'concept '+(i+1) : 'concept');
+      const ntxt = meta ? `<div class="concept-notes">${meta.notes}</div>` : '';
+      html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}"><figcaption>${esc(cap)}</figcaption>${ntxt}</figure>`;
+    });
     html+=`</div>`;
   } else { html+=`<div class="empty">No concept generated yet.</div>`; }
 
