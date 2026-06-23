@@ -127,6 +127,7 @@ const rooms=[
 ];
 const S=100; // metres -> svg units
 const VER="10"; // bump when committed images change, to bust browser cache
+const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
 //   concepts    = the burned design renders (concept/<roomId>/)
@@ -246,25 +247,25 @@ function renderPanel(){
   } else { html+=`<div class="empty">No concept generated yet.</div>`; }
 
   // ---- Inspirations section ----
-  html+=`<div class="seclabel"><span class="sec-t">Inspirations</span><button id="addbtn">+ Add</button></div>`;
+  html+=`<div class="seclabel"><span class="sec-t">Inspirations</span>${READONLY?'':'<button id="addbtn">+ Add</button>'}</div>`;
   html+=`<div class="board" id="board">`;
   inspos.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${inspoSrc(r.id,f)}" alt="inspiration ${i+1}" loading="lazy"></figure>`; });
-  rInsp.forEach(p=>{ html+=`<figure class="pin"><img src="${esc(p.url)}" alt="inspiration" loading="lazy"><button class="rm" data-pin="${p.id}" data-url="${esc(p.url)}" title="Remove" aria-label="Remove image">×</button></figure>`; });
+  rInsp.forEach(p=>{ html+=`<figure class="pin"><img src="${esc(p.url)}" alt="inspiration" loading="lazy">${READONLY?'':`<button class="rm" data-pin="${p.id}" data-url="${esc(p.url)}" title="Remove" aria-label="Remove image">×</button>`}</figure>`; });
   html+=`</div>`;
-  if(!inspos.length&&!rInsp.length) html+=`<div class="empty">No inspirations yet — tap “+ Add”.</div>`;
+  if(!inspos.length&&!rInsp.length) html+=`<div class="empty">No inspirations yet${READONLY?'.':' — tap “+ Add”.'}</div>`;
 
   // ---- Furniture & Fittings section ----
-  html+=`<div class="seclabel"><span class="sec-t">Furniture &amp; Fittings</span><button id="addfurn">+ Add</button></div>`;
+  html+=`<div class="seclabel"><span class="sec-t">Furniture &amp; Fittings</span>${READONLY?'':'<button id="addfurn">+ Add</button>'}</div>`;
   html+=`<div class="board" id="furnboard">`;
   furnList.forEach((f,i)=>{ html+=`<figure class="pin"><img src="${furnSrc(r.id,f)}" alt="${esc(niceName(f))}" loading="lazy"><figcaption>${esc(niceName(f))}</figcaption></figure>`; });
-  rFurn.forEach(p=>{ html+=`<figure class="pin"><img src="${esc(p.url)}" alt="furniture" loading="lazy"><button class="rm" data-pin="${p.id}" data-url="${esc(p.url)}" title="Remove" aria-label="Remove image">×</button></figure>`; });
+  rFurn.forEach(p=>{ html+=`<figure class="pin"><img src="${esc(p.url)}" alt="furniture" loading="lazy">${READONLY?'':`<button class="rm" data-pin="${p.id}" data-url="${esc(p.url)}" title="Remove" aria-label="Remove image">×</button>`}</figure>`; });
   html+=`</div>`;
-  if(!furnList.length&&!rFurn.length) html+=`<div class="empty">No pieces yet — tap “+ Add” to collect possible furniture &amp; fittings.</div>`;
-  html+=`<div class="hint" id="drophint">Pins sync live for everyone with the link. Tap <b>+ Add</b> (or drop images) to add. Tap any image to enlarge.</div>`;
+  if(!furnList.length&&!rFurn.length) html+=`<div class="empty">No pieces yet${READONLY?'.':' — tap “+ Add” to collect possible furniture &amp; fittings.'}</div>`;
+  html+=`<div class="hint" id="drophint">${READONLY?'Shared design board — view only. Tap any image to enlarge.':'Pins sync live for everyone with the link. Tap <b>+ Add</b> (or drop images) to add. Tap any image to enlarge.'}</div>`;
   detail.innerHTML=html;
 
-  document.getElementById('addbtn').onclick=()=>{addTarget='inspiration';fileInput.click();};
-  document.getElementById('addfurn').onclick=()=>{addTarget='furniture';fileInput.click();};
+  const ab=document.getElementById('addbtn'); if(ab)ab.onclick=()=>{addTarget='inspiration';fileInput.click();};
+  const af=document.getElementById('addfurn'); if(af)af.onclick=()=>{addTarget='furniture';fileInput.click();};
   const boardEl=document.getElementById('board'), furnEl=document.getElementById('furnboard');
   // lightbox + error state on EVERY image in the panel
   detail.querySelectorAll('.pin img').forEach(im=>{
@@ -272,7 +273,7 @@ function renderPanel(){
     im.addEventListener('error',()=>{const p=im.parentNode;p.classList.add('imgfail');p.setAttribute('data-fail',im.getAttribute('src'));});
   });
   detail.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(b.dataset.pin,b.dataset.url);}));
-  [[boardEl,'inspiration'],[furnEl,'furniture']].forEach(([zone,tg])=>{
+  if(!READONLY) [[boardEl,'inspiration'],[furnEl,'furniture']].forEach(([zone,tg])=>{
     zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
     zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
     zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files.length)addFiles(e.dataTransfer.files,r.id,tg);});
@@ -324,6 +325,11 @@ function openLB(src){lb.querySelector('img').src=src;lb.classList.add('open');}
 lb.addEventListener('click',()=>lb.classList.remove('open'));
 document.addEventListener('keydown',e=>{if(e.key==='Escape')lb.classList.remove('open');});
 
+if(READONLY){
+  const s=document.getElementById('sync'); if(s)s.textContent="◍ Shared design board — view only";
+  const sub=document.querySelector('.sub');
+  if(sub)sub.innerHTML="A room-by-room design board for our home — the actual space, design concepts, inspirations and furniture direction. Tap a room to explore.";
+}
 updateBadges();
 select("living");
 loadBoard();
