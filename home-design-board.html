@@ -143,8 +143,16 @@ const rooms=[
   pal:["#46503f","#5a3d29","#e8e0d4","#b08d57"],
   notes:"Walnut accents, muted-green stone tile, cream stone counter, brass fixtures, a round mirror and warm moody lighting."},
  {id:"kitchen",n:"KITCHEN",x:3.62,z:6.465,w:3.685,d:2.0,cat:"serv",zone:"design",
-  pal:["#5a3d29","#e8e0d4","#8c8c88","#46503f"],
-  notes:"Warm walnut cabinetry top and bottom, cream-stone counters, grey stone-tile floor, induction cooktop, a green-marble backsplash accent, a backlit shoji-style panel and plants."},
+  pal:["#5a3d29","#3f6b4a","#e8e0d4","#caa57f"],
+  notes:"Narrow galley, both walls fitted, fridge at the far end by the entrance, clear central walkway. Warm walnut/teak cabinetry, stone counters, a tile accent and an Akari pendant — mid-century × Japandi, continuous with the home. Concepts rendered from the actual kitchen photo, so the layout is true to the real space.",
+  conceptMeta:[
+   {name:"Walnut + Green Zellige",
+    notes:"The jewel-tone one: warm walnut cabinetry with a glossy emerald-green zellige tile backsplash, cream terrazzo counters, reeded fluted-glass upper display cabinets, brass gooseneck tap, Akari pendant. Highest impact. <b>Ask ID firm:</b> zellige grout colour + sealing for a kitchen."},
+   {name:"Warm Minimal Terrazzo",
+    notes:"The bright, calm one: walnut flat-front lowers with cream matte tall full-height uppers, pale terrazzo counters, a fluted tambour stone backsplash, brass taps, under-cabinet lighting. Elegant and editorial. <b>Ask ID firm:</b> terrazzo vs sintered-stone for counters."},
+   {name:"Moody Reeded Wood",
+    notes:"The cosy, collected one: full teak cabinetry, reeded fluted-glass uppers, a built-in niche with terracotta checkerboard mosaic + floating shelves, honed dark granite, warm evening glow. <em>Draft render — to be 4K-polished once a direction is locked.</em>"}
+  ]},
  {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.83,cat:"wet",zone:"util",
   notes:"Household shelter — storage / utility, keep functional."},
  {id:"ledge",n:"AIR-CON LEDGE",x:0,z:6.465,w:2.10,d:0.667,cat:"serv",zone:"util",
@@ -153,7 +161,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="12"; // bump when committed images change, to bust browser cache
+const VER="13"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
