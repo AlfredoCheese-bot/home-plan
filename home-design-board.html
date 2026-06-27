@@ -117,9 +117,17 @@ const rooms=[
  {id:"bed2",n:"BEDROOM 2",x:2.975,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
   pal:["#e8e0d4","#d8a3a0","#5a3d29","#caa57f"],
   notes:"Soft and light — warm walnut joinery, cream walls, dusty-pink textiles, a walnut desk, a playful graphic print, rattan accents and plants."},
- {id:"bed3",n:"BEDROOM 3",x:5.78,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
-  pal:["#2f4d8c","#5a3d29","#e8e0d4","#c9742f"],
-  notes:"Deep cobalt-blue feature wall, walnut bed frame and joinery, a mustard throw, a mid-century lamp, warm dim lighting and walnut floor."},
+ {id:"bed3",n:"FLEX LOUNGE",x:5.78,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
+  pal:["#9a5a2c","#5a3d29","#9aa88f","#caa57f"],
+  notes:"Not a bedroom — a flexible lounge that flows off the living room: somewhere to relax, read, or get on the floor with the baby. Mid-century modern leading (rich walnut, tapered legs, tan leather, a colour pop, graphic art) over a calm Japandi backdrop. Soft washable floor, rounded low furniture, hidden toy storage, open play space.",
+  conceptMeta:[
+   {name:"Open Lounge Extension",
+    notes:"Opens to the living room via a timber-glass sliding partition. Tan leather chaise, low walnut credenza on splayed legs, big abstract canvas, patterned rug, bouclé pouffe. The truest MCM living-room extension — most connected to the living space."},
+   {name:"Daybed Lounge",
+    notes:"An olive-green mid-century daybed on tapered legs that <b>flexes to a guest bed</b>, walnut spindle shelving, Nelson-style pendants, herringbone walnut floor. The most flexible option and the boldest colour pop. <em>My pick for the brief.</em>"},
+   {name:"Reading Den",
+    notes:"Two tan leather lounge chairs, a full walnut bookshelf wall, twin abstract prints, a round jute rug with bouclé poufs for floor play. Snug, characterful, library-like — the cosiest of the three."}
+  ]},
  {id:"living",n:"LIVING / DINING",x:8.585,z:0,w:3.765,d:6.81,cat:"live",zone:"design",hero:true,
   pal:["#9aa88f","#5a3d29","#46503f","#e8e0d4"],
   notes:"Sage-green sofa, dark walnut floor, cream-stone tables, rice-paper lantern pendants, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs.",
@@ -145,7 +153,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="11"; // bump when committed images change, to bust browser cache
+const VER="12"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
