@@ -101,8 +101,16 @@
 const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"};
 const rooms=[
  {id:"master",n:"MAIN BEDROOM",x:0,z:0,w:2.975,d:4.635,cat:"bed",zone:"design",
-  pal:["#5a3d29","#e3d8c4","#c9742f","#2f4d8c"],
-  notes:"Warm walnut slat headboard wall with cove lighting, oatmeal + camel linen bedding, a mustard throw and a cobalt cushion, a rice-paper lantern, walnut floor, one large leafy plant."},
+  pal:["#5a3d29","#e3d8c4","#9aa88f","#c9742f"],
+  notes:"Mid-century modern × Japandi. Warm walnut, low platform bed, paper-lantern lighting, oatmeal/bouclé neutrals with one colour pop, plants — calm and collected. Three concepts span light → collected → dark.",
+  conceptMeta:[
+   {name:"Akari Warm Minimal",
+    notes:"The light, calm end. Pale oak platform bed, oatmeal bouclé linen, a round Akari rice-paper globe lantern, walnut slat headboard wall, shoji-softened window, one big plant. Serene and uncluttered. <b>Reads largest</b> — good if we want the room to feel airy."},
+   {name:"Walnut Collector",
+    notes:"The warm, retro end. All-walnut warmth, a floating shelf with abstract / Bauhaus-style art, mushroom lamps, a mustard throw, round jute rug, vinyl corner. Characterful and collected. <b>To refine:</b> push a green-rust organic-shape rug + a clay accent wall for more colour."},
+   {name:"Walnut + Concrete",
+    notes:"The dark, dramatic end. Walnut slat wall meeting raw microcement concrete with cove lighting, low black-framed platform bed, deep green velvet, layered jute rug. Moody and masculine. <em>Draft render — to be 4K-polished once direction is locked.</em>"}
+  ]},
  {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.34,d:1.83,cat:"wet",zone:"design",
   pal:["#5a3d29","#e8e0d4","#c0734a","#b08d57"],
   notes:"Walnut vanity, cream stone counter, terracotta + cream zellige accent tiles, round mirror, brass fixtures, warm task lighting."},
@@ -137,7 +145,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="10"; // bump when committed images change, to bust browser cache
+const VER="11"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
