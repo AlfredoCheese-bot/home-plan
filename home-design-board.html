@@ -137,7 +137,15 @@ const rooms=[
    {name:"Walnut Lounge",
     notes:"Tan leather sofa, walnut joinery, slat pendant over dining. TV left, sofa right, 8-seat dining at window end. <b>Ask ID firm:</b> walnut veneer vs solid for joinery, leather grade for tropical humidity."},
    {name:"Skylight Calm",
-    notes:"Seamless stretched-fabric ceiling light panel, pale oak, bouclé sofa. <b>Concern — bugs:</b> tropical insects are drawn to warm backlit panels. Counter: insist on a sealed aluminium extrusion frame with zero-gap perimeter gasket, LED strip (not fluorescent — cooler, less UV), and a <em>removable panel</em> for periodic cleaning. A well-sealed install is effectively bug-proof; ask the ID firm to spec this explicitly. Also confirm panel is rated IP4X minimum to handle Singapore humidity."}
+    notes:"Seamless stretched-fabric ceiling light panel, pale oak, bouclé sofa. <b>Concern — bugs:</b> tropical insects are drawn to warm backlit panels. Counter: insist on a sealed aluminium extrusion frame with zero-gap perimeter gasket, LED strip (not fluorescent — cooler, less UV), and a <em>removable panel</em> for periodic cleaning. A well-sealed install is effectively bug-proof; ask the ID firm to spec this explicitly. Also confirm panel is rated IP4X minimum to handle Singapore humidity."},
+   {name:"Concept 4B · Fusion — Daytime",
+    notes:"Mid-century × Japandi fusion keeping the shoji ceiling, now <b>edge-to-edge</b> wall-to-wall. Warm walnut-oak floor, curved olive bouclé sectional, tan-leather MCM lounge chair, brass arc lamp, squiggle art, camel linen curtains, curved-pattern rug. Shown in bright daylight."},
+   {name:"Concept 4B · Fusion — Evening",
+    notes:"Same scheme as 4B daytime, shown in warm dim 2700K evening — the edge-to-edge shoji ceiling glows as the main light source. Richer, moodier read of the walnut/olive/leather palette."},
+   {name:"Concept 4C · Fusion — Daytime",
+    notes:"Lighter Japandi-leaning fusion: edge-to-edge shoji ceiling, pale natural oak floor, oatmeal curved sofa with one olive accent chair, glass Noguchi-style table, single large abstract, sheer oat linen curtains. Airy and minimal — makes the room feel biggest."},
+   {name:"Concept 4C · Fusion — Evening",
+    notes:"Same pared-back 4C scheme in dim warm evening — the glowing edge-to-edge ceiling over the minimal room is the most dramatic of the set. <b>Floor (researched):</b> warm-to-pale oak bridges Japandi brightness with mid-century warmth, vs Concept 1's heavier dark walnut."}
   ]},
  {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.60,d:1.83,cat:"wet",zone:"design",
   pal:["#46503f","#5a3d29","#e8e0d4","#b08d57"],
@@ -161,7 +169,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="13"; // bump when committed images change, to bust browser cache
+const VER="14"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
