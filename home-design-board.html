@@ -132,12 +132,6 @@ const rooms=[
   pal:["#9aa88f","#5a3d29","#46503f","#e8e0d4"],
   notes:"Sage-green sofa, dark walnut floor, cream-stone tables, rice-paper lantern pendants, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs.",
   conceptMeta:[
-   {name:"Moody Grid",
-    notes:"Elongated washi-grid ceiling panel running toward the camera. Warm evening ambiance, beige walls, low furniture. <b>Ask ID firm:</b> panel lighting temperature (2700–3000 K recommended), dimmability, frame material."},
-   {name:"Walnut Lounge",
-    notes:"Tan leather sofa, walnut joinery, slat pendant over dining. TV left, sofa right, 8-seat dining at window end. <b>Ask ID firm:</b> walnut veneer vs solid for joinery, leather grade for tropical humidity."},
-   {name:"Skylight Calm",
-    notes:"Seamless stretched-fabric ceiling light panel, pale oak, bouclé sofa. <b>Concern — bugs:</b> tropical insects are drawn to warm backlit panels. Counter: insist on a sealed aluminium extrusion frame with zero-gap perimeter gasket, LED strip (not fluorescent — cooler, less UV), and a <em>removable panel</em> for periodic cleaning. A well-sealed install is effectively bug-proof; ask the ID firm to spec this explicitly. Also confirm panel is rated IP4X minimum to handle Singapore humidity."},
    {name:"Concept 4B · Fusion — Daytime",
     notes:"Mid-century × Japandi fusion keeping the shoji ceiling, now <b>edge-to-edge</b> wall-to-wall. Warm walnut-oak floor, curved olive bouclé sectional, tan-leather MCM lounge chair, brass arc lamp, squiggle art, camel linen curtains, curved-pattern rug. Shown in bright daylight."},
    {name:"Concept 4B · Fusion — Evening",
@@ -169,7 +163,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="14"; // bump when committed images change, to bust browser cache
+const VER="15"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
