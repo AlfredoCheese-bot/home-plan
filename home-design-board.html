@@ -161,8 +161,10 @@ const rooms=[
   pal:["#2f3b5a","#5a3d29","#c9742f","#8c8c88"],
   notes:"The hideaway — a true 2.015 × 1.535 m shelter (per the BIMECO drawing) turned into a warm Japanese sake/vinyl den with a computer nook. A wide, shallow box, not a deep room — see the true-to-scale plan under Actual Space. Door is a sliding panel in the corridor (not a swinging leaf), so the full depth is usable floor — but the mandatory SCDF steel blast door must remain intact behind it; confirm that detail with the ID firm. No drilling the reinforced walls/ceiling; all joinery freestanding or tension-mounted. Plan a power feed for the turntable/lights and a quiet fan for ventilation with the door shut.",
   conceptMeta:[
-   {name:"Izakaya Vinyl Bar (Fuse A)",
-    notes:"The winning direction — a warm mahogany/walnut izakaya listening-bar. Left wall: a dense Shōwa-era poster collage stacked with glowing 사랑/음식/삶 kanji lightboxes. Right wall: a backlit vinyl-record grid crowned by 飲む・食う・笑う lightboxes. A sculptural PH-style pendant over a poured-concrete DJ/bar counter with the turntable; a single low stool; amber under-shelf glow throughout. The right side is kept clear of extra shelving so the room reads open, not boxy. True 2.015 × 1.535 m footprint, sliding corridor door. <em>4K — mood/material reference; trust the to-scale plan under Actual Space for exact fit.</em>"}
+   {name:"Izakaya Vinyl Bar — front (true scale)",
+    notes:"The winning Fuse A direction, re-rendered <b>honest to the real 2.015 × 1.535 m footprint</b> with a person in frame for scale. Walking in, the poured-concrete counter is barely one stride away — snug, not a spacious bar. Back wall: backlit vinyl-record grid + two speakers, 飲む・食う・笑う amber kanji lightboxes, dark-green reeded backsplash, turntable, base record cubbies with tiny accent lamps. Left wall: Shōwa-era poster collage. Right wall kept clear mahogany. <em>No hanging pendants — light comes from the lightboxes + hidden LED strips. Ceiling height assumed 2.4 m — confirm with ID firm.</em>"},
+   {name:"Izakaya Vinyl Bar — side / depth (true scale)",
+    notes:"Profile view showing the real <b>1.535 m depth</b>: back against the corridor opening, the counter is an arm's length in front — about 1.1 m of standing room. The <b>sliding door sits outside in the corridor</b>; inside is a solid wall with a simple cut-out doorway (you can see the hallway through it). Same warm mahogany/walnut, concrete counter, vinyl grid, kanji lightboxes, poster collage, low stools. <em>The most dimensionally trustworthy render — pair with the to-scale plan &amp; elevation under Actual Space.</em>"}
   ]},
  {id:"ledge",n:"AIR-CON LEDGE",x:0,z:6.465,w:2.10,d:0.667,cat:"serv",zone:"util",
   notes:"External services ledge."},
@@ -170,7 +172,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="21"; // bump when committed images change, to bust browser cache
+const VER="22"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
