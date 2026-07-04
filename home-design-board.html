@@ -156,15 +156,19 @@ const rooms=[
     notes:"The cosy, collected one: full teak cabinetry, reeded fluted-glass uppers, a built-in niche with terracotta checkerboard mosaic + floating shelves, honed dark granite, warm evening glow. <em>Draft render — to be 4K-polished once a direction is locked.</em>"}
   ]},
  {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.83,cat:"wet",zone:"design",
-  pal:["#5a3d29","#e8e0d4","#8c8c88","#caa57f"],
-  notes:"Household shelter (HDB reinforced room, ~2.0 × 1.8 m). Design options: a walk-in wardrobe, a compact storeroom/pantry, or a small study nook. Constraints — the steel blast door and its vents must stay and cannot be blocked, and no drilling into the reinforced walls/ceiling; use freestanding or tension-mounted joinery. Keep it a fusion of mid-century modern × Japandi to match the rest of the home."},
+  pal:["#6b2f2a","#5a3d29","#c9742f","#8c8c88"],
+  notes:"The hideaway — a ~2.0 × 1.6 m shelter turned into a warm Japanese vinyl listening-bar / izakaya man-cave that doubles as a computer nook. Records, backlit displays, kanji lightboxes, a DJ deck and a whisky shelf. Constraints — the steel blast door and its vents must stay accessible and unblocked, and no drilling the reinforced walls/ceiling; all joinery freestanding or tension-mounted. Plan a power feed for the decks/lights and a quiet fan for ventilation with the door shut.",
+  conceptMeta:[
+   {name:"Oxblood Listening Bar",
+    notes:"Deep oxblood wood-panel grid with a backlit vinyl + kanji-lightbox display wall, Egon Schiele poster, brass picture lights, a concrete DJ-deck run, backlit whisky/coupe shelves and a gold beer tap, striped lounge chairs + a green marble cube table on a grid-tile floor, plus an iMac desk. Fuses the three saved references. <em>Draft render — 4K, to be refined with the ID firm.</em>"}
+  ]},
  {id:"ledge",n:"AIR-CON LEDGE",x:0,z:6.465,w:2.10,d:0.667,cat:"serv",zone:"util",
   notes:"External services ledge."},
  {id:"yard",n:"SERVICE YARD",x:2.13,z:6.465,w:1.49,d:2.0,cat:"serv",zone:"util",
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="15"; // bump when committed images change, to bust browser cache
+const VER="16"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
