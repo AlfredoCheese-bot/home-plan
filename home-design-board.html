@@ -22,6 +22,9 @@
   .wrap{max-width:1080px;margin:0 auto;display:flex;gap:44px;padding:20px 28px 64px;align-items:flex-start;flex-wrap:wrap}
   .planbox{flex:1 1 360px;min-width:300px;position:sticky;top:18px}
   svg{width:100%;height:auto;display:block;touch-action:manipulation}
+  .srcplan{margin-top:10px;text-align:center}
+  .srcplan a{font-size:11px;letter-spacing:.05em;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line);padding-bottom:1px}
+  .srcplan a:hover{color:var(--ink);border-color:var(--ink)}
   .room{cursor:pointer;transition:.12s}
   .room rect{stroke:#fff;stroke-width:3;transition:.12s}
   .room:hover rect{filter:brightness(.97)}
@@ -85,6 +88,7 @@
 <div class="wrap">
   <div class="planbox">
     <svg id="plan" viewBox="0 0 1235 899" aria-label="Floor plan"></svg>
+    <div class="srcplan"><a href="assets/bimeco-floor-plan.jpg?v=17" onclick="event.preventDefault();openLB('assets/bimeco-floor-plan.jpg?v=17')">↗ Original BIMECO floor plan &amp; dimensions</a></div>
   </div>
   <div class="detail" id="detail">
     <h2>Select a room</h2>
@@ -168,7 +172,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="16"; // bump when committed images change, to bust browser cache
+const VER="17"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
