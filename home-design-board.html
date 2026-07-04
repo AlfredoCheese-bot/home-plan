@@ -125,12 +125,6 @@ const rooms=[
   pal:["#9a5a2c","#5a3d29","#9aa88f","#caa57f"],
   notes:"Not a bedroom — a flexible lounge that flows off the living room: somewhere to relax, read, or get on the floor with the baby. Mid-century modern leading (rich walnut, tapered legs, tan leather, a colour pop, graphic art) over a calm Japandi backdrop. Soft washable floor, rounded low furniture, hidden toy storage, open play space.",
   conceptMeta:[
-   {name:"Open Lounge Extension",
-    notes:"Opens to the living room via a timber-glass sliding partition. Tan leather chaise, low walnut credenza on splayed legs, big abstract canvas, patterned rug, bouclé pouffe. The truest MCM living-room extension — most connected to the living space."},
-   {name:"Daybed Lounge",
-    notes:"An olive-green mid-century daybed on tapered legs that <b>flexes to a guest bed</b>, walnut spindle shelving, Nelson-style pendants, herringbone walnut floor. The most flexible option and the boldest colour pop. <em>My pick for the brief.</em>"},
-   {name:"Reading Den",
-    notes:"Two tan leather lounge chairs, a full walnut bookshelf wall, twin abstract prints, a round jute rug with bouclé poufs for floor play. Snug, characterful, library-like — the cosiest of the three."},
    {name:"Ceiling Cabinet · Tokonoma Alcoves",
     notes:"The 3m full-height walnut ceiling cabinet (hidden toy/household storage) with a feature run of <b>3 backlit rounded tokonoma niches</b>, one curated object each. Sculptural, calm, lots of negative space — the design is the emptiness. Note: open niches collect dust and sit within a toddler's reach."},
    {name:"Ceiling Cabinet · Shoji Glow",
@@ -176,7 +170,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="19"; // bump when committed images change, to bust browser cache
+const VER="20"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
