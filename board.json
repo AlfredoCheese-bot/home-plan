@@ -80,9 +80,11 @@
     "furniture": []
   },
   "shelter": {
-    "actual": [],
+    "actual": [
+      "shelter-scale-plan.jpg"
+    ],
     "concepts": [
-      "shelter-1-oxblood-listening-bar.jpg"
+      "shelter-2-indigo-noren-sake-den.jpg"
     ],
     "inspirations": [],
     "furniture": []

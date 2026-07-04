@@ -159,12 +159,12 @@ const rooms=[
    {name:"Moody Reeded Wood",
     notes:"The cosy, collected one: full teak cabinetry, reeded fluted-glass uppers, a built-in niche with terracotta checkerboard mosaic + floating shelves, honed dark granite, warm evening glow. <em>Draft render — to be 4K-polished once a direction is locked.</em>"}
   ]},
- {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.83,cat:"wet",zone:"design",
-  pal:["#6b2f2a","#5a3d29","#c9742f","#8c8c88"],
-  notes:"The hideaway — a ~2.0 × 1.6 m shelter turned into a warm Japanese vinyl listening-bar / izakaya man-cave that doubles as a computer nook. Records, backlit displays, kanji lightboxes, a DJ deck and a whisky shelf. Constraints — the steel blast door and its vents must stay accessible and unblocked, and no drilling the reinforced walls/ceiling; all joinery freestanding or tension-mounted. Plan a power feed for the decks/lights and a quiet fan for ventilation with the door shut.",
+ {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.535,cat:"wet",zone:"design",
+  pal:["#2f3b5a","#5a3d29","#c9742f","#8c8c88"],
+  notes:"The hideaway — a true 2.015 × 1.535 m shelter (per the BIMECO drawing) turned into a warm Japanese sake/vinyl den with a computer nook. A wide, shallow box, not a deep room — see the true-to-scale plan under Actual Space. Door is a sliding panel in the corridor (not a swinging leaf), so the full depth is usable floor — but the mandatory SCDF steel blast door must remain intact behind it; confirm that detail with the ID firm. No drilling the reinforced walls/ceiling; all joinery freestanding or tension-mounted. Plan a power feed for the turntable/lights and a quiet fan for ventilation with the door shut.",
   conceptMeta:[
-   {name:"Oxblood Listening Bar",
-    notes:"Deep oxblood wood-panel grid with a backlit vinyl + kanji-lightbox display wall, Egon Schiele poster, brass picture lights, a concrete DJ-deck run, backlit whisky/coupe shelves and a gold beer tap, striped lounge chairs + a green marble cube table on a grid-tile floor, plus an iMac desk. Fuses the three saved references. <em>Draft render — 4K, to be refined with the ID firm.</em>"}
+   {name:"Indigo Noren Sake Den",
+    notes:"Deep indigo-blue glazed tile back wall, warm walnut joinery and brass trim, backlit sake + Japanese whisky shelves, a slim walnut counter with a turntable, a 酒座 kanji lightbox, a single low stool, an indigo noren curtain, and a tucked-in monitor nook. Corrected to the true 2.015 × 1.535 m footprint with a sliding door (no swing leaf shown). <em>4K — the most trustworthy render for actual scale.</em>"}
   ]},
  {id:"ledge",n:"AIR-CON LEDGE",x:0,z:6.465,w:2.10,d:0.667,cat:"serv",zone:"util",
   notes:"External services ledge."},
@@ -172,7 +172,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="17"; // bump when committed images change, to bust browser cache
+const VER="18"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
