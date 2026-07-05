@@ -106,12 +106,10 @@ const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"
 const rooms=[
  {id:"master",n:"MAIN BEDROOM",x:0,z:0,w:2.975,d:4.635,cat:"bed",zone:"design",
   pal:["#5a3d29","#e3d8c4","#9aa88f","#c9742f"],
-  notes:"Mid-century modern × Japandi. The signature: a floor-to-ceiling walnut slat headboard wall with backlit rice-paper shoji panels set flush between the slats — echoing the Living Room's shoji ceiling and the Flex Lounge's shoji-glow cabinet, so the whole home shares one lighting language. Low walnut platform bed with floating side ledges, warm mid-tone oak floor (the researched living-room choice, carried through), sheer + linen double curtains, sage bouclé bench tying to the sofa, one burnt-caramel colour pop, brass details, cove lighting — no downlights, no pendant.",
+  notes:"Mid-century modern × Japandi — a warm, moody 'jazz kissa' (listening room) bedroom, the calm-and-collected sibling of the HH Shelter's vinyl-bar soul. Built from the client's pins: a low dark-walnut platform bed whose headboard extends into floating side-ledge nightstands (the one real joinery piece), sculptural Noguchi paper lamps for all the light (no hanging fixture — Akari globes + a tall ribbed floor lamp), a bold red pebble graphic art print, a black-leather + walnut spindle lounge chair, a jazz photo gallery wall, crates of vinyl, jute rug on a dark herringbone floor. Charcoal linen with rust + olive + cream accents. Deliberately buildable: bed/ledges custom, everything else freestanding & buyable.",
   conceptMeta:[
-   {name:"Shoji Cocoon — daytime",
-    notes:"Morning mode: soft light through the double sheers, shoji panels translucent but unlit, oatmeal linen + sage layer + burnt-caramel throw, olive tree in a ceramic pot. Airy and calm — the slat wall reads as warm texture, not weight. <em>4K.</em>"},
-   {name:"Shoji Cocoon — evening",
-    notes:"Night mode: the three embedded shoji panels glow warm amber as the room's main light, with a low golden cove — a ryokan cocoon. The panels are the bedside lighting (dimmable), so no lamps needed on the floating ledges. This glow doubles as a gentle night-light. <em>4K. Replaced the three earlier draft directions — recoverable from git history if wanted.</em>"}
+   {name:"Jazz Kissa (evening)",
+    notes:"The mood shot: warm and dim, lit only by the Noguchi paper lamps glowing — Akari globes on the floating walnut ledges and brass swing-arms, plus a tall ribbed paper floor lamp by the window. Dark-walnut platform bed, charcoal linen, rust + olive pillows, cream fringed throw, red pebble art, spindle leather chair, Coltrane/Miles vinyl. Intimate, collected, masculine. <em>4K. No hanging light — all sculptural lamps. Replaced the earlier Shoji Cocoon direction; recoverable from git history.</em>"}
   ]},
  {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.34,d:1.83,cat:"wet",zone:"design",
   pal:["#5a3d29","#e8e0d4","#c0734a","#b08d57"],
@@ -168,7 +166,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="25"; // bump when committed images change, to bust browser cache
+const VER="26"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
