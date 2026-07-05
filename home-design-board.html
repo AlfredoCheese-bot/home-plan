@@ -108,8 +108,10 @@ const rooms=[
   pal:["#5a3d29","#e3d8c4","#9aa88f","#c9742f"],
   notes:"Mid-century modern × Japandi — a warm, moody 'jazz kissa' (listening room) bedroom, the calm-and-collected sibling of the HH Shelter's vinyl-bar soul. Built from the client's pins: a low dark-walnut platform bed whose headboard extends into floating side-ledge nightstands (the one real joinery piece), sculptural Noguchi paper lamps for all the light (no hanging fixture — Akari globes + a tall ribbed floor lamp), a bold red pebble graphic art print, a black-leather + walnut spindle lounge chair, a jazz photo gallery wall, crates of vinyl, jute rug on a dark herringbone floor. Charcoal linen with rust + olive + cream accents. Deliberately buildable: bed/ledges custom, everything else freestanding & buyable.",
   conceptMeta:[
-   {name:"Jazz Kissa (evening)",
-    notes:"The mood shot: warm and dim, lit only by the Noguchi paper lamps glowing — Akari globes on the floating walnut ledges and brass swing-arms, plus a tall ribbed paper floor lamp by the window. Dark-walnut platform bed, charcoal linen, rust + olive pillows, cream fringed throw, red pebble art, spindle leather chair, Coltrane/Miles vinyl. Intimate, collected, masculine. <em>4K. No hanging light — all sculptural lamps. Replaced the earlier Shoji Cocoon direction; recoverable from git history.</em>"}
+   {name:"Jazz Kissa — moody",
+    notes:"The darker mood: warm and dim, lit only by the Noguchi paper lamps glowing — Akari globes on the floating walnut ledges and brass swing-arms, plus a tall ribbed paper floor lamp by the window. Dark-walnut platform bed with extended headboard ledges, <b>charcoal linen</b> with rust + olive pillows and a cream fringed throw, <b>red pebble graphic art</b>, spindle leather chair, Coltrane/Miles vinyl. Intimate, collected, masculine. <em>4K. No hanging light — all sculptural lamps.</em>"},
+   {name:"Jazz Kissa — Coltrane",
+    notes:"The warmer, softer take: warm cream plaster walls, <b>cream/oatmeal linen</b> with a waffle blanket + fringed throw, a black-and-white <b>Coltrane concert poster</b> (Japanese tour lettering) as the hero art, a Noguchi Akari globe on the walnut nightstand + a tall stacked-gourd paper floor lamp, a black-leather + walnut lounge chair, Miles Davis vinyl on the floor, a jazz photo gallery, slender tree, dark herringbone floor. Same jazz-den soul, more serene and elegant. <em>4K. No hanging light. Both master options share the same buildable bones — only the bed/ledges are custom.</em>"}
   ]},
  {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.34,d:1.83,cat:"wet",zone:"design",
   pal:["#5a3d29","#e8e0d4","#c0734a","#b08d57"],
@@ -166,7 +168,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="26"; // bump when committed images change, to bust browser cache
+const VER="27"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
