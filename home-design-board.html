@@ -281,16 +281,22 @@ function renderPanel(){
   } else { html+=`<div class="empty">No photo of the actual space yet.</div>`; }
 
   // ---- Concept section (burned from the inspirations) ----
-  html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${concepts.length>1?concepts.length+' options · ':''}burned from inspirations</span></div>`;
-  if(concepts.length){
+  const hiddenC = hiddenConcepts()[r.id]||[];
+  const visC = concepts.map((f,i)=>({f,i})).filter(o=>!hiddenC.includes(o.f));
+  html+=`<div class="seclabel"><span class="sec-t">Concept</span><span class="sec-s">${visC.length>1?visC.length+' options · ':''}burned from inspirations</span></div>`;
+  if(visC.length){
     html+=`<div class="board concepts">`;
-    concepts.forEach((f,i)=>{
+    visC.forEach(({f,i})=>{
       const meta = r.conceptMeta && r.conceptMeta[i];
       const cap  = meta ? meta.name : (concepts.length>1 ? 'concept '+(i+1) : 'concept');
       const ntxt = meta ? `<div class="concept-notes">${meta.notes}</div>` : '';
-      html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}"><figcaption>${esc(cap)}</figcaption>${ntxt}</figure>`;
+      const rmc  = READONLY?'':`<button class="rm rmc" data-room="${esc(r.id)}" data-file="${esc(f)}" title="Remove concept" aria-label="Remove concept">×</button>`;
+      html+=`<figure class="pin concept"><img src="${conceptSrc(r.id,f)}" alt="${esc(r.n)} concept ${i+1}">${rmc}<figcaption>${esc(cap)}</figcaption>${ntxt}</figure>`;
     });
     html+=`</div>`;
+    if(!READONLY&&hiddenC.length) html+=`<div class="hint">${hiddenC.length} concept${hiddenC.length>1?'s':''} hidden on this device · <a href="#" id="restoreC">restore</a></div>`;
+  } else if(!READONLY&&hiddenC.length){
+    html+=`<div class="empty">All concepts hidden on this device · <a href="#" id="restoreC">restore</a></div>`;
   } else { html+=`<div class="empty">No concept generated yet.</div>`; }
 
   // ---- Inspirations section ----
@@ -319,7 +325,9 @@ function renderPanel(){
     im.addEventListener('click',()=>openLB(im.src));
     im.addEventListener('error',()=>{const p=im.parentNode;p.classList.add('imgfail');p.setAttribute('data-fail',im.getAttribute('src'));});
   });
-  detail.querySelectorAll('.rm').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(b.dataset.pin,b.dataset.url);}));
+  detail.querySelectorAll('.rm:not(.rmc)').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();removePin(b.dataset.pin,b.dataset.url);}));
+  detail.querySelectorAll('.rmc').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();if(confirm('Remove this concept from the board view? (hidden on this device only — the file stays in the repo)'))hideConcept(b.dataset.room,b.dataset.file);}));
+  const rcBtn=document.getElementById('restoreC'); if(rcBtn)rcBtn.addEventListener('click',e=>{e.preventDefault();unhideConcepts(selected);});
   if(!READONLY) [[boardEl,'inspiration'],[furnEl,'furniture']].forEach(([zone,tg])=>{
     zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
     zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
@@ -366,6 +374,10 @@ async function removePin(pinId,url){
   }catch(e){}
   await loadPins();
 }
+// ---- Concept hide/restore (per-device; concepts are static repo files, not Supabase) ----
+function hiddenConcepts(){ try{return JSON.parse(localStorage.getItem('hiddenConcepts')||'{}');}catch(e){return {};} }
+function hideConcept(id,f){ const h=hiddenConcepts(); h[id]=h[id]||[]; if(!h[id].includes(f))h[id].push(f); localStorage.setItem('hiddenConcepts',JSON.stringify(h)); renderPanel(); }
+function unhideConcepts(id){ const h=hiddenConcepts(); delete h[id]; localStorage.setItem('hiddenConcepts',JSON.stringify(h)); renderPanel(); }
 
 /* ---- lightbox ---- */
 function openLB(src){lb.querySelector('img').src=src;lb.classList.add('open');}
