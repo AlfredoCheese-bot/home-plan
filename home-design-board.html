@@ -137,7 +137,7 @@ const rooms=[
    {name:"Concept 4B · Fusion — Evening",
     notes:"Same scheme as 4B daytime, shown in warm dim 2700K evening — the edge-to-edge shoji ceiling glows as the main light source. Richer, moodier read of the walnut/olive/leather palette."},
    {name:"Concept 4B · Larger Ceiling Panels — Evening",
-    notes:"Same 4B scheme and evening glow, but the shoji ceiling uses <b>fewer, larger rectangular panels</b> (a coarser grid) rather than the fine lattice — closer to the locked 3×3 trellis direction. Calmer, more modern-Japanese ceiling read."},
+    notes:"Same 4B scheme and evening glow, but the shoji ceiling uses <b>fewer, larger rectangular panels</b> (a coarser grid) rather than the fine lattice — closer to the locked 3×3 trellis direction. <b>Plain smooth opal panels, no texture</b> (per the locked spec). Calmer, more modern-Japanese ceiling read."},
    {name:"Concept 4C · Fusion — Daytime",
     notes:"Lighter Japandi-leaning fusion: edge-to-edge shoji ceiling, pale natural oak floor, oatmeal curved sofa with one olive accent chair, glass Noguchi-style table, single large abstract, sheer oat linen curtains. Airy and minimal — makes the room feel biggest."},
    {name:"Concept 4C · Fusion — Evening",
@@ -168,7 +168,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="30"; // bump when committed images change, to bust browser cache
+const VER="31"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
