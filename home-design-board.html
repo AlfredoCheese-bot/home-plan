@@ -145,13 +145,13 @@ const rooms=[
   pal:["#46503f","#5a3d29","#e8e0d4","#b08d57"],
   notes:"Walnut accents, muted-green stone tile, cream stone counter, brass fixtures, a round mirror and warm moody lighting."},
  {id:"kitchen",n:"KITCHEN",x:3.62,z:6.465,w:3.685,d:2.0,cat:"serv",zone:"design",
-  pal:["#5a3d29","#b8bdc0","#1c1c1c","#efe9df"],
-  notes:"Narrow galley, both walls fitted, single tall fridge in the near-left corner, clear central walkway. Handleless slab cabinetry, brushed stainless-steel counters + full stainless backsplash, slim hood over the induction hob, under-cabinet LED, no pendant. A full-height fluted reeded-glass sliding divider caps the far end, screening the service yard/laundry while borrowing its light; black-and-white checkerboard floor. Mid-century × Japandi, continuous with the home. Rendered from the actual kitchen photo, so the layout is true to the real space.",
+  pal:["#5a3d29","#b8bdc0","#c56b45","#efe9df"],
+  notes:"Narrow galley, both walls fitted, single tall fridge in the near-left corner, clear central walkway. Handleless slab cabinetry, brushed stainless-steel counters + full stainless backsplash, slim hood over the induction hob, under-cabinet LED, no pendant. A full-height fluted reeded-glass sliding divider caps the far end, screening the service yard/laundry while borrowing its light; warm white-and-terracotta checkerboard floor. Mid-century × Japandi, continuous with the home. Rendered from the actual kitchen photo, so the layout is true to the real space.",
   conceptMeta:[
    {name:"Walnut + Stainless",
-    notes:"The warmer one: natural walnut handleless cabinetry — taken full-height to the ceiling on the left (hood-integrated) — against brushed stainless counters + backsplash. Fluted-glass service-yard divider, black-and-white checkerboard floor. Calm, mid-century, timeless."},
+    notes:"The warmer one: natural walnut handleless cabinetry — taken full-height to the ceiling on the left (hood-integrated) — against brushed stainless counters + backsplash. Fluted-glass service-yard divider, white-and-terracotta checkerboard floor. Calm, mid-century, timeless."},
    {name:"Dark Wood + Stainless",
-    notes:"The moodier one: same layout and equipment positions, but deep espresso/smoked-oak timber for higher contrast against the steel. Same fluted-glass divider + checkerboard floor. Refined and dramatic. <b>Wood-tone is the only decision</b> — everything else is identical between the two."}
+    notes:"The moodier one: same layout and equipment positions, but deep espresso/smoked-oak timber for higher contrast against the steel. Same fluted-glass divider + white-and-terracotta checker floor. Refined and dramatic. <b>Wood-tone is the only decision</b> — everything else is identical between the two."}
   ]},
  {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.535,cat:"wet",zone:"design",
   pal:["#2f3b5a","#5a3d29","#c9742f","#8c8c88"],
@@ -166,7 +166,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="28"; // bump when committed images change, to bust browser cache
+const VER="29"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
