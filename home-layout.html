@@ -54,6 +54,8 @@
   /* items */
   .item{cursor:grab}
   .item.dragging{cursor:grabbing}
+  /* clear "picked up" cue — the only feedback you get on a touchscreen */
+  .item.dragging .shape{filter:drop-shadow(0 3px 7px rgba(30,25,18,.4));opacity:.92}
   .item .shape.base{fill:var(--carp);stroke:var(--carpline);stroke-width:1.6}
   .item .shape.tall{fill:var(--tall);stroke:var(--tallline);stroke-width:2}
   .item .shape.top{fill:rgba(139,94,60,.07);stroke:var(--tophung);stroke-width:1.8;stroke-dasharray:6 4}
@@ -153,7 +155,7 @@
 <body>
 <header>
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
-  <div class="sub">Everything is modular — <b>walls included</b>. Tap a black wall to select it, then drag it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
+  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. <b>↶ Undo</b> reverses any change (⌘Z on desktop). Drag a corner square to resize.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. Tap the <b>⊕</b> on any room or the 📷 on a selected piece to attach images.</div>
   <div class="bar">
@@ -163,6 +165,7 @@
     <select id="palette"></select>
     <button id="addBtn">+ Add piece</button>
     <button id="addWallBtn">+ Add wall</button>
+    <button id="undoBtn" disabled>↶ Undo</button>
     <button id="resetBtn">↺ Reset to plan</button>
     <button id="exportBtn">Export JSON</button>
     <button id="saveBtn" class="primary" disabled>Save layout</button>
@@ -184,7 +187,7 @@
     <button id="tDup">⧉ Duplicate</button>
     <button id="tImg">📷 Images</button>
     <button id="tDel" class="tb-danger">✕ Remove</button>
-    <span class="hintsm">drag the piece to move · drag a corner square to resize</span>
+    <span class="hintsm">hold to pick up · drag a corner square to resize</span>
   </div>
 
   <div class="toolbar" id="wallbar">
@@ -198,7 +201,7 @@
     <button id="wRot">⟳ Rotate 90°</button>
     <button id="wDup">⧉ Duplicate</button>
     <button id="wDel" class="tb-danger">✕ Remove wall</button>
-    <span class="hintsm">drag the wall to move · drag an orange end-dot to change length or angle</span>
+    <span class="hintsm">hold to pick up · drag an orange end-dot to change length or angle</span>
   </div>
 
   <div class="planscroll"><svg id="plan" aria-label="Modular floor plan"></svg></div>
@@ -482,53 +485,49 @@ function attachWallDrag(hit,w){
     e.preventDefault();e.stopPropagation();
     if(selWall!==w.id)selectWall(w.id);
     if(READONLY)return;
-    const start=svgPoint(e),o={x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2};
-    let sx=0,sy=0,moved=false;
-    const line=gWalls.querySelector(`[data-wid="${w.id}"]`);
-    const hitl=gWallHit.querySelector(`[data-wid="${w.id}"]`);
-    const mv=ev=>{
-      const p=svgPoint(ev);
-      sx=Math.round((o.x1+(p.x-start.x)/S)*20)/20-o.x1;
-      sy=Math.round((o.y1+(p.y-start.y)/S)*20)/20-o.y1;
-      if(sx||sy)moved=true;
-      const t=`translate(${sx*S},${sy*S})`;
-      if(line)line.setAttribute('transform',t);
-      if(hitl)hitl.setAttribute('transform',t);
-      gHandles.setAttribute('transform',t);
-    };
-    const up=()=>{
-      window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);
-      window.removeEventListener('pointercancel',up);
-      gHandles.removeAttribute('transform');
-      if(moved){w.x1=o.x1+sx;w.y1=o.y1+sy;w.x2=o.x2+sx;w.y2=o.y2+sy;markDirty();}
-      renderWalls();
-    };
-    window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);
-    window.addEventListener('pointercancel',up);
+    const o={x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2};
+    let sx=0,sy=0,snap=null,start=null,line=null,hitl=null;
+    beginGesture(e,{
+      start:p=>{start=p;snap=snapshot();
+        line=gWalls.querySelector(`[data-wid="${w.id}"]`);
+        hitl=gWallHit.querySelector(`[data-wid="${w.id}"]`);
+        if(line)line.classList.add('selw');},
+      move:p=>{
+        sx=Math.round((o.x1+(p.x-start.x)/S)*20)/20-o.x1;
+        sy=Math.round((o.y1+(p.y-start.y)/S)*20)/20-o.y1;
+        const t=`translate(${sx*S},${sy*S})`;
+        if(line)line.setAttribute('transform',t);
+        if(hitl)hitl.setAttribute('transform',t);
+        gHandles.setAttribute('transform',t);
+      },
+      end:moved=>{
+        gHandles.removeAttribute('transform');
+        if(moved&&(sx||sy)){pushHistory(snap);w.x1=o.x1+sx;w.y1=o.y1+sy;w.x2=o.x2+sx;w.y2=o.y2+sy;markDirty();}
+        renderWalls();
+      }
+    });
   });
 }
 function addHandle(w,which){
-  const h=el('circle',{class:'handle',cx:(which===1?w.x1:w.x2)*S,cy:(which===1?w.y1:w.y2)*S,r:9});
+  const h=el('circle',{class:'handle',cx:(which===1?w.x1:w.x2)*S,cy:(which===1?w.y1:w.y2)*S,r:11});
   h.addEventListener('pointerdown',e=>{
     if(e.button)return;
     e.preventDefault();e.stopPropagation();if(READONLY)return;
-    let moved=false;
-    const mv=ev=>{const p=svgPoint(ev);
-      let nx=Math.round((p.x/S)*20)/20, ny=Math.round((p.y/S)*20)/20;
-      const ox=which===1?w.x2:w.x1, oy=which===1?w.y2:w.y1;
-      if(Math.abs(nx-ox)<0.12)nx=ox;          // snap to vertical
-      if(Math.abs(ny-oy)<0.12)ny=oy;          // snap to horizontal
-      if(nx===ox&&ny===oy)return;             // never collapse to zero length
-      if(which===1){w.x1=nx;w.y1=ny;}else{w.x2=nx;w.y2=ny;}
-      moved=true;renderWalls();
-    };
-    const up=()=>{
-      window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);
-      window.removeEventListener('pointercancel',up);
-      if(moved)markDirty();
-    };
-    window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);
-    window.addEventListener('pointercancel',up);
+    let snap=null;
+    beginGesture(e,{
+      immediate:true,
+      start:()=>{snap=snapshot();},
+      move:p=>{
+        let nx=Math.round((p.x/S)*20)/20, ny=Math.round((p.y/S)*20)/20;
+        const ox=which===1?w.x2:w.x1, oy=which===1?w.y2:w.y1;
+        if(Math.abs(nx-ox)<0.12)nx=ox;        // snap to vertical
+        if(Math.abs(ny-oy)<0.12)ny=oy;        // snap to horizontal
+        if(nx===ox&&ny===oy)return;           // never collapse to zero length
+        if(which===1){w.x1=nx;w.y1=ny;}else{w.x2=nx;w.y2=ny;}
+        renderWalls();
+      },
+      end:moved=>{if(moved){pushHistory(snap);markDirty();}}
+    });
   });
   gHandles.appendChild(h);
 }
@@ -590,54 +589,48 @@ function attachDrag(g,it){
     e.preventDefault();e.stopPropagation();
     if(selectedId!==it.id)select(it.id);          // rebuilds the DOM — re-acquire the node below
     if(READONLY)return;
-    const node=gItems.querySelector(`[data-id="${it.id}"]`);
-    if(node)node.classList.add('dragging');
-    const start=svgPoint(e),ox=it.x,oy=it.y;
-    let nx=ox,ny=oy,moved=false;
-    const mv=ev=>{
-      const p=svgPoint(ev);
-      nx=Math.round((ox+(p.x-start.x)/S)*20)/20;
-      ny=Math.round((oy+(p.y-start.y)/S)*20)/20;
-      if(nx!==ox||ny!==oy)moved=true;
-      const t=`translate(${(nx-ox)*S},${(ny-oy)*S})`;
-      if(node)node.setAttribute('transform',t);
-      gIH.setAttribute('transform',t);
-    };
-    const up=()=>{
-      window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);
-      window.removeEventListener('pointercancel',up);
-      if(moved){it.x=nx;it.y=ny;markDirty();}
-      renderItems();
-    };
-    window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);
-    window.addEventListener('pointercancel',up);
+    const ox=it.x,oy=it.y;
+    let node=null,snap=null,start=null,nx=ox,ny=oy;
+    beginGesture(e,{
+      start:p=>{start=p;snap=snapshot();
+        node=gItems.querySelector(`[data-id="${it.id}"]`);
+        if(node)node.classList.add('dragging');},
+      move:p=>{
+        nx=Math.round((ox+(p.x-start.x)/S)*20)/20;
+        ny=Math.round((oy+(p.y-start.y)/S)*20)/20;
+        const t=`translate(${(nx-ox)*S},${(ny-oy)*S})`;
+        if(node)node.setAttribute('transform',t);
+        gIH.setAttribute('transform',t);
+      },
+      end:moved=>{
+        if(moved&&(nx!==ox||ny!==oy)){pushHistory(snap);it.x=nx;it.y=ny;markDirty();}
+        renderItems();
+      }
+    });
   });
 }
 /* corner handles — drag to resize; the opposite corner stays pinned */
 function addResizeHandles(it){
   [[0,0,'nw'],[1,0,'ne'],[0,1,'sw'],[1,1,'se']].forEach(([cx,cy,cls])=>{
     const hx=(it.x+cx*it.w)*S, hy=(it.y+cy*it.d)*S;
-    const h=el('rect',{class:'rhandle '+cls,x:hx-7,y:hy-7,width:14,height:14,rx:2});
+    const h=el('rect',{class:'rhandle '+cls,x:hx-9,y:hy-9,width:18,height:18,rx:3});
     h.addEventListener('pointerdown',e=>{
       if(e.button)return;
       e.preventDefault();e.stopPropagation();if(READONLY)return;
       const fixX=it.x+(1-cx)*it.w, fixY=it.y+(1-cy)*it.d;
-      let moved=false;
-      const mv=ev=>{
-        const p=svgPoint(ev);
-        const nx=Math.round((p.x/S)*20)/20, ny=Math.round((p.y/S)*20)/20;
-        const w=Math.abs(nx-fixX), d=Math.abs(ny-fixY);
-        if(w<0.1||d<0.1)return;               // keep a usable minimum
-        it.w=w;it.d=d;it.x=Math.min(nx,fixX);it.y=Math.min(ny,fixY);
-        moved=true;renderItems();
-      };
-      const up=()=>{
-        window.removeEventListener('pointermove',mv);window.removeEventListener('pointerup',up);
-        window.removeEventListener('pointercancel',up);
-        if(moved)markDirty();
-      };
-      window.addEventListener('pointermove',mv);window.addEventListener('pointerup',up);
-      window.addEventListener('pointercancel',up);
+      let snap=null;
+      beginGesture(e,{
+        immediate:true,
+        start:()=>{snap=snapshot();},
+        move:p=>{
+          const nx=Math.round((p.x/S)*20)/20, ny=Math.round((p.y/S)*20)/20;
+          const w=Math.abs(nx-fixX), d=Math.abs(ny-fixY);
+          if(w<0.1||d<0.1)return;             // keep a usable minimum
+          it.w=w;it.d=d;it.x=Math.min(nx,fixX);it.y=Math.min(ny,fixY);
+          renderItems();
+        },
+        end:moved=>{if(moved){pushHistory(snap);markDirty();}}
+      });
     });
     gIH.appendChild(h);
   });
@@ -663,17 +656,69 @@ function syncToolbar(){
   document.getElementById('tD').value=Math.round(it.d*1000);
 }
 function markDirty(){dirty=true;updateSave();}
+
+/* ================= undo ================= */
+const HIST=[],HMAX=60;
+function snapshot(){return JSON.stringify({items,walls:wallSegs});}
+function pushHistory(s){if(!s)return;HIST.push(s);if(HIST.length>HMAX)HIST.shift();updateUndo();}
+function updateUndo(){const b=document.getElementById('undoBtn');if(b)b.disabled=!HIST.length;}
+function undo(){
+  if(!HIST.length)return;
+  let st;try{st=JSON.parse(HIST.pop());}catch(e){updateUndo();return;}
+  items=st.items;wallSegs=st.walls;selectedId=null;selWall=null;
+  markDirty();renderItems();renderWalls();updateUndo();toast("Undone");
+}
+document.getElementById('undoBtn').addEventListener('click',undo);
+window.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!READONLY){e.preventDefault();undo();}
+});
+
+/* ================= gesture model =================
+   Touch: a swipe pans the plan; you must LONG-PRESS to pick something up, so scrolling
+   never turns into an accidental drag. Mouse/pen: drag starts immediately past 3px.
+   Small handles are always immediate — you had to aim at them deliberately.        */
+const planScroll=document.querySelector('.planscroll');
+const LONGPRESS=340, PAN_TOL=12, MOUSE_TOL=3;
+function beginGesture(e,h){
+  const isTouch=e.pointerType==='touch';
+  const immediate=h.immediate||!isTouch;
+  let mode=immediate?'armed':'pending';
+  const sx=e.clientX,sy=e.clientY,startPt=svgPoint(e);
+  let lx=sx,ly=sy,moved=false,timer=null;
+  const engage=()=>{mode='drag';h.start&&h.start(startPt);if(navigator.vibrate)try{navigator.vibrate(9);}catch(_){}};
+  if(!immediate)timer=setTimeout(()=>{if(mode==='pending')engage();},LONGPRESS);
+  const mv=ev=>{
+    const dx=ev.clientX-lx,dy=ev.clientY-ly;
+    const dist=Math.hypot(ev.clientX-sx,ev.clientY-sy);
+    if(mode==='pending'&&dist>PAN_TOL){clearTimeout(timer);mode='pan';}
+    else if(mode==='armed'&&dist>MOUSE_TOL){clearTimeout(timer);engage();}
+    if(mode==='pan'){ if(planScroll)planScroll.scrollLeft-=dx; window.scrollBy(0,-dy); }
+    else if(mode==='drag'){moved=true;h.move&&h.move(svgPoint(ev));}
+    lx=ev.clientX;ly=ev.clientY;
+  };
+  const up=()=>{
+    clearTimeout(timer);
+    window.removeEventListener('pointermove',mv);
+    window.removeEventListener('pointerup',up);
+    window.removeEventListener('pointercancel',up);
+    h.end&&h.end(mode==='drag'&&moved);
+  };
+  window.addEventListener('pointermove',mv,{passive:true});
+  window.addEventListener('pointerup',up);
+  window.addEventListener('pointercancel',up);
+}
 function updateSave(){const b=document.getElementById('saveBtn');b.disabled=!dirty||READONLY;}
 document.getElementById('tLabel').addEventListener('input',e=>{const it=cur();if(it){it.label=e.target.value.toUpperCase();markDirty();renderItems();}});
-document.getElementById('tType').addEventListener('change',e=>{const it=cur();if(it){it.type=e.target.value;markDirty();renderItems();}});
-document.getElementById('tW').addEventListener('change',e=>{const it=cur();if(it){it.w=Math.max(100,+e.target.value||600)/1000;markDirty();renderItems();}});
-document.getElementById('tD').addEventListener('change',e=>{const it=cur();if(it){it.d=Math.max(50,+e.target.value||600)/1000;markDirty();renderItems();}});
-document.getElementById('tRot').addEventListener('click',()=>{const it=cur();if(!it)return;
+document.getElementById('tLabel').addEventListener('focus',()=>{if(cur())pushHistory(snapshot());});
+document.getElementById('tType').addEventListener('change',e=>{const it=cur();if(it){pushHistory(snapshot());it.type=e.target.value;markDirty();renderItems();}});
+document.getElementById('tW').addEventListener('change',e=>{const it=cur();if(it){pushHistory(snapshot());it.w=Math.max(100,+e.target.value||600)/1000;markDirty();renderItems();}});
+document.getElementById('tD').addEventListener('change',e=>{const it=cur();if(it){pushHistory(snapshot());it.d=Math.max(50,+e.target.value||600)/1000;markDirty();renderItems();}});
+document.getElementById('tRot').addEventListener('click',()=>{const it=cur();if(!it)return;pushHistory(snapshot());
   const cx=it.x+it.w/2,cy=it.y+it.d/2,w=it.d,d=it.w;
   it.w=w;it.d=d;it.x=Math.round((cx-w/2)*20)/20;it.y=Math.round((cy-d/2)*20)/20;markDirty();renderItems();});
-document.getElementById('tDup').addEventListener('click',()=>{const it=cur();if(!it)return;
+document.getElementById('tDup').addEventListener('click',()=>{const it=cur();if(!it)return;pushHistory(snapshot());
   const c={...it,id:'it'+Date.now().toString(36),x:it.x+0.2,y:it.y+0.2};items.push(c);selectedId=c.id;markDirty();renderItems();});
-document.getElementById('tDel').addEventListener('click',()=>{const it=cur();if(!it)return;
+document.getElementById('tDel').addEventListener('click',()=>{const it=cur();if(!it)return;pushHistory(snapshot());
   items=items.filter(i=>i.id!==it.id);selectedId=null;markDirty();renderItems();});
 document.getElementById('tImg').addEventListener('click',()=>{const it=cur();if(it)openDrawer('item:'+it.id,it.label||'Piece');});
 
@@ -686,9 +731,10 @@ function syncWallBar(){
   document.getElementById('wType').value=w.kind;
   document.getElementById('wLen').value=Math.round(Math.hypot(w.x2-w.x1,w.y2-w.y1)*1000);
 }
-document.getElementById('wType').addEventListener('change',e=>{const w=curWall();if(w){w.kind=e.target.value;markDirty();renderWalls();}});
+document.getElementById('wType').addEventListener('change',e=>{const w=curWall();if(w){pushHistory(snapshot());w.kind=e.target.value;markDirty();renderWalls();}});
 document.getElementById('wLen').addEventListener('change',e=>{
   const w=curWall();if(!w)return;
+  pushHistory(snapshot());
   const L=Math.max(0.1,(+e.target.value||1000)/1000);
   const dx=w.x2-w.x1,dy=w.y2-w.y1,d=Math.hypot(dx,dy)||1;
   w.x2=Math.round((w.x1+dx/d*L)*20)/20;w.y2=Math.round((w.y1+dy/d*L)*20)/20;
@@ -696,6 +742,7 @@ document.getElementById('wLen').addEventListener('change',e=>{
 });
 document.getElementById('wRot').addEventListener('click',()=>{
   const w=curWall();if(!w)return;
+  pushHistory(snapshot());
   const mx=(w.x1+w.x2)/2,my=(w.y1+w.y2)/2,r=(x,y)=>[mx-(y-my),my+(x-mx)];
   const [a,b]=r(w.x1,w.y1),[c,d]=r(w.x2,w.y2);
   w.x1=Math.round(a*20)/20;w.y1=Math.round(b*20)/20;w.x2=Math.round(c*20)/20;w.y2=Math.round(d*20)/20;
@@ -703,16 +750,19 @@ document.getElementById('wRot').addEventListener('click',()=>{
 });
 document.getElementById('wDup').addEventListener('click',()=>{
   const w=curWall();if(!w)return;
+  pushHistory(snapshot());
   const c={...w,id:'w'+(wallSeq++),x1:w.x1+0.2,y1:w.y1+0.2,x2:w.x2+0.2,y2:w.y2+0.2};
   wallSegs.push(c);selWall=c.id;markDirty();renderWalls();
 });
 document.getElementById('wDel').addEventListener('click',()=>{
   const w=curWall();if(!w)return;
+  pushHistory(snapshot());
   wallSegs=wallSegs.filter(x=>x.id!==w.id);selWall=null;markDirty();renderWalls();
   toast("Wall removed");
 });
 document.getElementById('addWallBtn').addEventListener('click',()=>{
   if(READONLY)return;
+  pushHistory(snapshot());
   const n=wallSegs.length%6;
   const w={id:'w'+(wallSeq++),kind:'wall',x1:6.6+n*0.2,y1:1.6+n*0.2,x2:8.6+n*0.2,y2:1.6+n*0.2};
   wallSegs.push(w);selectWall(w.id);markDirty();
