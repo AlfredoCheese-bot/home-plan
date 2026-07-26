@@ -86,7 +86,8 @@
   .toolbar label{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
   .toolbar input[type=number]{width:74px}
   .toolbar input[type=text]{width:150px}
-  .tb-danger{color:#a33}
+  .tb-danger{color:#a33;border-color:#e0bcbc}
+  .tb-danger:hover{border-color:#a33}
 
   /* legend */
   .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px}
@@ -145,6 +146,11 @@
     .toolbar>*{flex:0 0 auto}
     .toolbar label{display:none}
     .toolbar .hintsm{display:none}
+    /* actions lead, so they're reachable without scrolling the strip */
+    #tRot,#tDup,#tImg,#wRot,#wDup{order:-1}
+    /* …and Remove is pinned to the right edge so it is ALWAYS visible */
+    .tb-danger{position:sticky;right:0;z-index:2;background:#fff;
+      box-shadow:-10px 0 12px 6px rgba(250,248,244,.97)}
     .toolbar input[type=text]{width:120px}
     .toolbar input[type=number]{width:84px}
     .legend{grid-template-columns:1fr;gap:10px}
@@ -155,7 +161,7 @@
 <body>
 <header>
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
-  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. <b>↶ Undo</b> reverses any change (⌘Z on desktop). Drag a corner square to resize.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
+  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. Tap the <b>⊕</b> on any room or the 📷 on a selected piece to attach images.</div>
   <div class="bar">
@@ -670,7 +676,14 @@ function undo(){
 }
 document.getElementById('undoBtn').addEventListener('click',undo);
 window.addEventListener('keydown',e=>{
-  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'&&!READONLY){e.preventDefault();undo();}
+  if(READONLY)return;
+  if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return;}
+  const t=e.target,tag=t&&t.tagName;
+  if(tag==='INPUT'||tag==='SELECT'||tag==='TEXTAREA')return;   // don't hijack typing
+  if(e.key==='Delete'||e.key==='Backspace'){
+    if(selectedId){e.preventDefault();document.getElementById('tDel').click();}
+    else if(selWall){e.preventDefault();document.getElementById('wDel').click();}
+  }
 });
 
 /* ================= gesture model =================
