@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Modular Layout — Home Plan</title>
+<style>
+  :root{ --ink:#1c1b19; --muted:#7a766e; --line:#ece8e2; --paper:#ffffff;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    --bed:#ece6dc; --wet:#e4e9e4; --live:#efe9df; --serv:#ededeb;
+    --carp:#e7c496; --carpline:#b45f22; --tall:#d9a86c; --tallline:#8a5a28;
+    --tophung:#8b5e3c; --loose:#e9e6df; --looseline:#6f6a61; --accent:#b45f22; }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);-webkit-font-smoothing:antialiased}
+  header{max-width:1180px;margin:0 auto;padding:28px 24px 4px}
+  h1{margin:0;font-family:var(--serif);font-weight:500;font-size:26px}
+  .sub{font-size:12.5px;color:var(--muted);margin-top:7px;line-height:1.6;max-width:640px}
+  .sub b{color:var(--ink)}
+  .bar{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
+  .bar a{font-size:11px;letter-spacing:.04em;color:var(--muted);text-decoration:none;
+    border:1px solid var(--line);padding:8px 13px;border-radius:2px}
+  .bar a:hover{color:var(--ink);border-color:var(--ink)}
+  .synced{font-size:11px;color:var(--muted)} .synced.off{color:#b00020}
+  button{font:inherit;font-size:11px;letter-spacing:.04em;padding:8px 13px;
+    border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:2px;cursor:pointer}
+  button:hover{border-color:var(--ink)}
+  button.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+  button.primary[disabled]{opacity:.4;cursor:default}
+  select,input[type=text],input[type=number]{font:inherit;font-size:12px;padding:7px 8px;
+    border:1px solid var(--line);border-radius:2px;background:#fff;color:var(--ink)}
+  .wrap{max-width:1180px;margin:0 auto;padding:14px 24px 60px}
+  .planscroll{overflow-x:auto;border:1px solid var(--line);border-radius:4px;background:#fbfaf7}
+  .planscroll svg{display:block;min-width:820px;width:100%;height:auto;touch-action:none}
+
+  /* plan */
+  .rm-fill{stroke:#fff;stroke-width:2}
+  .wall{fill:none;stroke:#26241f;stroke-width:7;stroke-linecap:square}
+  .wall-removed{fill:none;stroke:#c0392b;stroke-width:4;stroke-dasharray:13 8;opacity:.75}
+  .glazing{fill:none;stroke:#4a8fa3;stroke-width:4;stroke-dasharray:2 5;stroke-linecap:round}
+  .rlabel{font-size:12.5px;font-weight:600;fill:#57534a;pointer-events:none;letter-spacing:.04em}
+  .rdim{font-size:10px;fill:#a09a8e;pointer-events:none}
+  .odim{font-size:11px;fill:#6f6a61;font-weight:600}
+  .areaplus{cursor:pointer}
+  .areaplus circle{fill:#fff;stroke:#b8b2a6;stroke-width:1.5}
+  .areaplus:hover circle{stroke:var(--ink)}
+  .areaplus text{font-size:13px;fill:#57534a;font-weight:700;pointer-events:none}
+  .areaplus .cnt{font-size:9px;fill:#fff;font-weight:700}
+  .areaplus .cntbg{fill:var(--accent);stroke:none}
+
+  /* items */
+  .item{cursor:grab}
+  .item.dragging{cursor:grabbing}
+  .item .shape.base{fill:var(--carp);stroke:var(--carpline);stroke-width:1.6}
+  .item .shape.tall{fill:var(--tall);stroke:var(--tallline);stroke-width:2}
+  .item .shape.top{fill:rgba(139,94,60,.07);stroke:var(--tophung);stroke-width:1.8;stroke-dasharray:6 4}
+  .item .shape.loose{fill:var(--loose);stroke:var(--looseline);stroke-width:1.3}
+  .item .shape.appl{fill:#ffffff;stroke:var(--looseline);stroke-width:1.4}
+  .item .shape.rug{fill:#f1ede3;stroke:#d9d2c2;stroke-width:1}
+  .item text{font-size:9.5px;fill:#4a4640;pointer-events:none;font-weight:600;letter-spacing:.02em}
+  .item .tallmark{stroke:var(--tallline);stroke-width:1;opacity:.6}
+  .item.sel .shape{stroke:#111 !important;stroke-width:2.6 !important}
+  .imgbadge circle{fill:#3b6ea5}
+  .imgbadge text{fill:#fff !important;font-size:8.5px !important}
+
+  /* toolbar */
+  .toolbar{display:none;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;
+    padding:10px;border:1px solid var(--line);border-radius:4px;background:#faf8f4}
+  .toolbar.show{display:flex}
+  .toolbar label{font-size:10px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase}
+  .toolbar input[type=number]{width:74px}
+  .toolbar input[type=text]{width:150px}
+  .tb-danger{color:#a33}
+
+  /* legend */
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px}
+  .lgbox{border:1px solid var(--line);border-radius:6px;padding:13px 15px;background:#fff}
+  .lgbox h3{margin:0 0 9px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink)}
+  .lgrow{display:flex;align-items:center;gap:9px;font-size:11.5px;color:#4a4640;margin:5px 0}
+  .sw{flex:0 0 30px;height:15px;border-radius:2px;position:relative}
+  .sw.wall{background:#26241f;height:7px}
+  .sw.rem{background:repeating-linear-gradient(90deg,#c0392b 0 9px,transparent 9px 15px);height:4px}
+  .sw.glz{background:repeating-linear-gradient(90deg,#4a8fa3 0 3px,transparent 3px 8px);height:4px}
+  .sw.base{background:var(--carp);border:1.6px solid var(--carpline)}
+  .sw.tall{background:var(--tall);border:2px solid var(--tallline)}
+  .sw.top{background:rgba(139,94,60,.07);border:1.8px dashed var(--tophung)}
+  .sw.loose{background:var(--loose);border:1.3px solid var(--looseline)}
+  .sw.appl{background:#fff;border:1.4px solid var(--looseline);font-size:9px;display:grid;place-items:center;color:#4a4640;font-weight:700}
+  .sw.rug{background:#f1ede3;border:1px solid #d9d2c2}
+  .sw.cam{background:#3b6ea5;border-radius:50%;flex:0 0 15px;height:15px}
+
+  /* images drawer */
+  .drawer{position:fixed;top:0;right:-390px;width:min(390px,94vw);height:100%;background:#fff;
+    border-left:1px solid var(--line);z-index:40;transition:right .22s;display:flex;flex-direction:column}
+  .drawer.open{right:0;box-shadow:-8px 0 30px rgba(30,25,18,.13)}
+  .dr-head{padding:16px 18px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .dr-head h2{margin:0;font-family:var(--serif);font-weight:500;font-size:17px}
+  .dr-body{flex:1;overflow-y:auto;padding:14px 18px}
+  .dr-grid{columns:2;column-gap:8px}
+  .dpin{margin:0 0 8px;break-inside:avoid;position:relative;border-radius:2px;overflow:hidden;background:#f5f2ed}
+  .dpin img{display:block;width:100%;cursor:zoom-in}
+  .dpin .rm{position:absolute;top:5px;right:5px;width:22px;height:22px;padding:0;font-size:14px;
+    border-radius:50%;background:rgba(255,255,255,.92);border:none;display:grid;place-items:center;color:#8a3b3b}
+  .dr-empty{font-size:12px;color:var(--muted);font-style:italic;padding:8px 0}
+  .lb{position:fixed;inset:0;background:rgba(20,18,16,.9);display:none;place-items:center;z-index:60;padding:16px;cursor:zoom-out}
+  .lb.open{display:grid}
+  .lb img{max-width:100%;max-height:100%}
+  input[type=file]{display:none}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;
+    font-size:12px;padding:10px 18px;border-radius:20px;opacity:0;pointer-events:none;transition:.25s;z-index:70}
+  .toast.show{opacity:1}
+  @media(max-width:760px){header,.wrap{padding-left:14px;padding-right:14px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
+  <div class="sub">Walls are <b>fixed</b>. Everything else is modular — drag to move, tap to select.
+    <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
+    <b>grey</b> = loose furniture. Tap the <b>⊕</b> on any room or the 📷 on a selected piece to attach images.</div>
+  <div class="bar">
+    <a href="home-design-board.html">← Design board</a>
+    <span class="synced" id="sync">◍ Live sync</span>
+    <span style="flex:1"></span>
+    <select id="palette"></select>
+    <button id="addBtn">+ Add piece</button>
+    <button id="exportBtn">Export JSON</button>
+    <button id="saveBtn" class="primary" disabled>Save layout</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="toolbar" id="toolbar">
+    <label>Piece</label><input type="text" id="tLabel">
+    <label>Type</label>
+    <select id="tType">
+      <option value="base">Base / counter</option><option value="tall">Full-height</option>
+      <option value="top">Top-hung</option><option value="loose">Loose furniture</option>
+      <option value="appl">Appliance</option><option value="rug">Rug</option>
+    </select>
+    <label>W mm</label><input type="number" id="tW" step="10" min="100">
+    <label>D mm</label><input type="number" id="tD" step="10" min="50">
+    <button id="tRot">⟳ Rotate</button>
+    <button id="tDup">⧉ Duplicate</button>
+    <button id="tImg">📷 Images</button>
+    <button id="tDel" class="tb-danger">✕ Remove</button>
+  </div>
+
+  <div class="planscroll"><svg id="plan" aria-label="Modular floor plan"></svg></div>
+
+  <div class="legend">
+    <div class="lgbox"><h3>Structure (fixed)</h3>
+      <div class="lgrow"><span class="sw wall"></span>Structural / retained wall</div>
+      <div class="lgrow"><span class="sw rem"></span>Wall removed — Bed 3 merged into living</div>
+      <div class="lgrow"><span class="sw glz"></span>Fluted-glass sliding divider (kitchen ⇄ yard)</div>
+    </div>
+    <div class="lgbox"><h3>Carpentry (movable)</h3>
+      <div class="lgrow"><span class="sw base"></span>Base cabinetry / countertop</div>
+      <div class="lgrow"><span class="sw top"></span>Top-hung / overhead cabinet</div>
+      <div class="lgrow"><span class="sw tall"></span>Full-height cabinetry (wardrobe, tall unit)</div>
+    </div>
+    <div class="lgbox"><h3>Furniture &amp; fittings</h3>
+      <div class="lgrow"><span class="sw loose"></span>Loose furniture (buyable, movable)</div>
+      <div class="lgrow"><span class="sw rug"></span>Rug</div>
+      <div class="lgrow"><span class="sw appl">F</span>Appliance — F fridge · WM washer · TV</div>
+    </div>
+    <div class="lgbox"><h3>Images &amp; use</h3>
+      <div class="lgrow"><span class="sw cam"></span>Blue dot = images attached (tap it)</div>
+      <div class="lgrow" style="color:#7a766e">⊕ on a room = add area images · select a piece → 📷.
+        Drag to move · toolbar to resize / rotate / duplicate / remove · <b>Save</b> syncs for everyone.</div>
+    </div>
+  </div>
+</div>
+
+<aside class="drawer" id="drawer">
+  <div class="dr-head"><h2 id="drTitle">Images</h2>
+    <span><button id="drAdd">+ Add images</button> <button id="drClose">✕</button></span></div>
+  <div class="dr-body"><div class="dr-grid" id="drGrid"></div><div class="dr-empty" id="drEmpty">No images yet.</div></div>
+</aside>
+<input type="file" id="file" accept="image/*" multiple>
+<div class="lb" id="lb"><img alt="enlarged"></div>
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+/* ================= geometry (metres) — walls FIXED, from the board plan + Layout 3 hacking ================= */
+const S=100;
+const READONLY=new URLSearchParams(location.search).has('view');
+const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"};
+const roomsFill=[
+ {id:"master",n:"MAIN BEDROOM",x:0,z:0,w:2.975,d:4.635,cat:"bed"},
+ {id:"bed2",n:"BEDROOM 2",x:2.975,z:0,w:2.805,d:3.49,cat:"bed"},
+ {id:"living",n:"LIVING",x:5.78,z:0,w:6.57,d:3.49,cat:"live",merged:true},
+ {id:"dining",n:"DINING",x:8.585,z:3.49,w:3.765,d:3.32,cat:"live",partOf:"living"},
+ {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.34,d:1.83,cat:"wet"},
+ {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.6,d:1.83,cat:"wet"},
+ {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.535,cat:"wet"},
+ {id:"kitchen",n:"KITCHEN",x:3.62,z:6.465,w:3.685,d:2.0,cat:"serv"},
+ {id:"yard",n:"YARD",x:2.13,z:6.465,w:1.49,d:2.0,cat:"serv"},
+ {id:"ledge",n:"A/C LEDGE",x:0,z:6.465,w:2.1,d:0.667,cat:"serv",util:true},
+];
+// wall segments [x1,y1,x2,y2] — structural + retained partitions (door gaps omitted at this scale)
+const walls=[
+ [0,0,12.35,0],[12.35,0,12.35,6.81],                       // top + right
+ [12.35,6.81,8.585,6.81],                                  // living bottom (entrance on this run)
+ [8.585,6.81,8.585,4.635],                                 // dining|foyer-kitchen wall
+ [7.305,6.465,7.305,8.465],[7.305,8.465,2.13,8.465],       // kitchen right + bottom
+ [2.13,8.465,2.13,6.465],[2.13,6.465,0,6.465],[0,6.465,0,0], // yard left, ledge line, left
+ [2.975,0,2.975,4.635],                                    // master | bed2 wall
+ [5.78,0,5.78,3.49],                                       // bed2 | living — RETAINED TV wall
+ [2.975,3.49,5.78,3.49],                                   // bed2 bottom (corridor)
+ [0,4.635,5.955,4.635],                                    // corridor | service core
+ [2.34,4.635,2.34,6.465],[3.94,4.635,3.94,6.17],           // ensuite|bath, bath|shelter
+ [5.955,4.635,5.955,6.17],[3.94,6.17,5.955,6.17],          // shelter right + bottom
+ [3.62,6.465,7.305,6.465],                                 // kitchen top
+];
+const wallsRemoved=[ [8.585,0,8.585,3.49],[5.78,3.49,8.585,3.49] ]; // old Bed-3 walls (hacked)
+const glazing=[ [3.62,6.465,3.62,8.465] ];                 // fluted-glass divider kitchen⇄yard
+
+/* ================= item model ================= */
+// {id,label,type:base|tall|top|loose|appl|rug, x,y,w,d, round?, area?}
+const seedItems=[
+ // living (merged)
+ {id:"tv",     label:"TV",        type:"appl", x:5.85,y:1.28,w:0.12,d:1.45},
+ {id:"tvcons", label:"TV CONSOLE",type:"base", x:5.99,y:0.85,w:0.45,d:2.55},
+ {id:"rugA",   label:"",          type:"rug",  x:6.55,y:0.55,w:3.05,d:2.75},
+ {id:"sofa",   label:"SOFA L",    type:"loose",x:7.95,y:0.72,w:1.05,d:2.75},
+ {id:"cof1",   label:"",          type:"loose",x:6.95,y:1.35,w:0.7,d:0.7,round:true},
+ {id:"cof2",   label:"",          type:"loose",x:7.0,y:2.2,w:0.5,d:0.5,round:true},
+ {id:"rugB",   label:"",          type:"rug",  x:9.95,y:0.5,w:2.15,d:2.7},
+ {id:"arm1",   label:"CHAIR",     type:"loose",x:10.5,y:0.7,w:0.8,d:0.85},
+ {id:"arm2",   label:"CHAIR",     type:"loose",x:10.5,y:2.15,w:0.8,d:0.85},
+ {id:"sidet",  label:"",          type:"loose",x:10.65,y:1.5,w:0.55,d:0.55,round:true},
+ // dining + foyer
+ {id:"dine",   label:"DINING 6",  type:"loose",x:10.3,y:4.3,w:1.0,d:1.9},
+ {id:"sideb",  label:"SIDEBOARD", type:"base", x:8.72,y:4.45,w:0.45,d:1.8},
+ {id:"shoe",   label:"SHOE",      type:"tall", x:9.5,y:6.32,w:1.2,d:0.38},
+ // kitchen (galley) — finalized scheme
+ {id:"kcT",    label:"COUNTER",   type:"base", x:3.72,y:6.5,w:2.75,d:0.6},
+ {id:"khT",    label:"TOP-HUNG",  type:"top",  x:3.72,y:6.5,w:2.75,d:0.35},
+ {id:"kcB",    label:"COUNTER",   type:"base", x:3.72,y:7.83,w:3.5,d:0.6},
+ {id:"khB",    label:"TOP-HUNG",  type:"top",  x:3.72,y:7.83,w:3.5,d:0.35},
+ {id:"fridge", label:"F",         type:"appl", x:6.52,y:6.5,w:0.75,d:0.72},
+ {id:"wm",     label:"WM",        type:"appl", x:2.55,y:7.85,w:0.6,d:0.62},
+ // master
+ {id:"bedQ",   label:"BED",       type:"loose",x:0.72,y:0.85,w:1.6,d:2.0},
+ {id:"bs1",    label:"",          type:"loose",x:0.18,y:0.9,w:0.5,d:0.42},
+ {id:"bs2",    label:"",          type:"loose",x:2.38,y:0.9,w:0.5,d:0.42},
+ {id:"wardM",  label:"WARDROBE",  type:"tall", x:0.18,y:3.95,w:2.4,d:0.6},
+ // bedroom 2
+ {id:"desk2",  label:"DESK",      type:"base", x:3.12,y:0.18,w:1.4,d:0.58},
+ {id:"top2",   label:"SHELF",     type:"top",  x:3.12,y:0.18,w:1.4,d:0.32},
+ {id:"bed2b",  label:"DAYBED",    type:"loose",x:3.08,y:2.42,w:2.0,d:0.95},
+ {id:"ward2",  label:"WARDROBE",  type:"tall", x:5.12,y:0.18,w:0.6,d:1.5},
+ // shelter + baths
+ {id:"izak",   label:"IZAKAYA DESK",type:"base",x:3.99,y:5.62,w:1.9,d:0.48},
+ {id:"vanE",   label:"VANITY",    type:"base", x:0.22,y:4.72,w:0.9,d:0.5},
+ {id:"vanB",   label:"VANITY",    type:"base", x:2.42,y:4.72,w:0.8,d:0.5},
+];
+const PRESETS=[
+ ["Base cabinet 600","base",0.6,0.6],["Counter run 1.8m","base",1.8,0.6],["Island 1.2m","base",1.2,0.8],
+ ["Top-hung run 1.8m","top",1.8,0.35],["Wardrobe 1.8m","tall",1.8,0.6],["Tall cabinet","tall",0.6,0.6],
+ ["TV console 2.4m","base",2.4,0.45],["Sideboard 1.6m","base",1.6,0.45],
+ ["Sofa 3-seat","loose",2.2,0.95],["Sofa L","loose",2.8,1.6],["Armchair","loose",0.8,0.85],
+ ["Coffee table","loose",1.0,0.6],["Round table","loose",0.6,0.6,"round"],["Dining table 6","loose",1.8,0.9],
+ ["Bed queen","loose",1.6,2.0],["Bed single","loose",1.0,2.0],["Bedside","loose",0.5,0.4],
+ ["Desk 1.2m","base",1.2,0.6],["Rug 2.4×1.7","rug",2.4,1.7],
+ ["Fridge","appl",0.75,0.72],["Washer","appl",0.6,0.62],["TV","appl",1.45,0.12],["Plant","loose",0.45,0.45,"round"],
+ ["Custom box","base",1.0,0.5],
+];
+let items=[]; let dirty=false; let selectedId=null;
+
+/* ================= supabase (same project as the board) ================= */
+const SB_URL="https://bjhprlbvcjwjoyyoxbly.supabase.co";
+const SB_KEY="sb_publishable_hwwuj13y2xNab3per4szyw_8zJAD91d";
+const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
+// Reuses the existing pins table. Layout rows are namespaced by room key so the main board ignores them:
+//   state  -> room 'layout:state'        url = JSON of items
+//   images -> room 'layout:item:<id>' or 'layout:area:<room>'   url = storage public URL
+const STATE_ROOM='layout:state', SEC='inspiration';
+let imgStore={}; // key -> [{id,url}]
+function setSync(t,off){const s=document.getElementById('sync');if(s){s.textContent=t;s.classList.toggle('off',!!off);}}
+
+async function loadAll(){
+  if(!sb){setSync("⚠ sync unavailable",1);items=structuredClone(seedItems);renderItems();return;}
+  try{
+    const {data,error}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').order('created_at');
+    if(error)throw error;
+    imgStore={};let stateRow=null;
+    (data||[]).forEach(p=>{
+      if(p.room===STATE_ROOM){stateRow=p;return;}
+      const key=p.room.slice(7); (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
+    });
+    if(stateRow){ try{items=JSON.parse(stateRow.url).items||[];}catch(e){items=structuredClone(seedItems);} }
+    else items=structuredClone(seedItems);
+    dirty=false;updateSave();renderItems();renderAreaPlus();
+    setSync(READONLY?"◍ Shared layout — view only":"◍ Live sync — shared with everyone on the link");
+    if(drawerKey)renderDrawer();
+  }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);renderItems();renderAreaPlus();}}
+}
+async function saveState(){
+  if(!sb)return alert("Sync isn't connected.");
+  const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent="Saving…";
+  try{
+    const url=JSON.stringify({v:1,updated:new Date().toISOString(),items});
+    const ins=await sb.from('pins').insert({room:STATE_ROOM,section:SEC,url}).select('id').single();
+    if(ins.error)throw ins.error;
+    await sb.from('pins').delete().eq('room',STATE_ROOM).neq('id',ins.data.id);
+    dirty=false;toast("Layout saved — synced live");
+  }catch(e){alert("Save failed: "+(e.message||e));}
+  btn.textContent="Save layout";updateSave();
+}
+function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{event:'*',schema:'public',table:'pins'},()=>{ if(!dirty)loadAll(); else refreshImagesOnly(); }).subscribe(); }
+async function refreshImagesOnly(){
+  if(!sb)return;
+  try{const {data}=await sb.from('pins').select('id,room,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
+    imgStore={};(data||[]).forEach(p=>{const key=p.room.slice(7);(imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
+    renderItems();renderAreaPlus();if(drawerKey)renderDrawer();
+  }catch(e){}
+}
+function compressBlob(file,max=1400,q=0.82){
+  return new Promise((res,rej)=>{
+    if(!file.type.startsWith('image/'))return rej(new Error('not an image'));
+    const img=new Image();
+    img.onload=()=>{let w=img.width,h=img.height;const s=Math.min(1,max/Math.max(w,h));
+      w=Math.round(w*s);h=Math.round(h*s);
+      const c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=>{URL.revokeObjectURL(img.src);res(b);},'image/jpeg',q);};
+    img.onerror=rej;img.src=URL.createObjectURL(file);
+  });
+}
+
+/* ================= plan render ================= */
+const svg=document.getElementById('plan');
+const NS="http://www.w3.org/2000/svg";
+svg.setAttribute('viewBox','-46 -46 1330 940');
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+const gBase=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gPlus=el('g',{});
+svg.append(gBase,gItems,gWalls,gPlus);
+
+roomsFill.forEach(r=>{
+  gBase.appendChild(el('rect',{class:'rm-fill',x:r.x*S,y:r.z*S,width:r.w*S,height:r.d*S,fill:Z[r.cat],opacity:r.util?0.5:0.85}));
+  const t=el('text',{class:'rlabel',x:(r.x+r.w/2)*S,y:(r.z+0.32)*S,'text-anchor':'middle'});
+  t.textContent=r.n;gBase.appendChild(t);
+  if(!r.util&&!r.partOf){
+    const d=el('text',{class:'rdim',x:(r.x+r.w/2)*S,y:(r.z+0.55)*S,'text-anchor':'middle'});
+    d.textContent=`${r.w.toFixed(2)} × ${r.d.toFixed(2)} m`;gBase.appendChild(d);
+  }
+});
+// corridor label
+const cor=el('text',{class:'rdim',x:5.2*S,y:4.15*S,'text-anchor':'middle'});cor.textContent='CORRIDOR';gBase.appendChild(cor);
+// overall dims
+const d1=el('text',{class:'odim',x:6.175*S,y:-18,'text-anchor':'middle'});d1.textContent='12.35 m';gBase.appendChild(d1);
+const d2=el('text',{class:'odim',x:-20,y:4.23*S,'text-anchor':'middle',transform:`rotate(-90 -20 ${4.23*S})`});d2.textContent='8.47 m';gBase.appendChild(d2);
+walls.forEach(w=>gWalls.appendChild(el('line',{class:'wall',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
+wallsRemoved.forEach(w=>gWalls.appendChild(el('line',{class:'wall-removed',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
+glazing.forEach(w=>gWalls.appendChild(el('line',{class:'glazing',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
+gWalls.style.pointerEvents='none';
+
+/* area ⊕ buttons */
+const AREAS=roomsFill.filter(r=>!r.util);
+function renderAreaPlus(){
+  gPlus.innerHTML='';
+  AREAS.forEach(r=>{
+    const key='area:'+r.id, n=(imgStore[key]||[]).length;
+    const cx=(r.x+r.w)*S-16, cy=r.z*S+16;
+    const g=el('g',{class:'areaplus'});
+    g.appendChild(el('circle',{cx,cy,r:10}));
+    const t=el('text',{x:cx,y:cy+4.5,'text-anchor':'middle'});t.textContent='+';g.appendChild(t);
+    if(n){ g.appendChild(el('circle',{class:'cntbg',cx:cx+9,cy:cy-9,r:7}));
+      const c=el('text',{class:'cnt',x:cx+9,y:cy-6,'text-anchor':'middle'});c.textContent=n;g.appendChild(c); }
+    g.addEventListener('click',e=>{e.stopPropagation();openDrawer(key,r.n);});
+    gPlus.appendChild(g);
+  });
+}
+
+/* items */
+const LAYER={rug:0,loose:1,base:2,tall:3,appl:4,top:5};
+function renderItems(){
+  gItems.innerHTML='';
+  [...items].sort((a,b)=>LAYER[a.type]-LAYER[b.type]).forEach(it=>{
+    const g=el('g',{class:'item'+(it.id===selectedId?' sel':''),'data-id':it.id});
+    const x=it.x*S,y=it.y*S,w=it.w*S,h=it.d*S;
+    if(it.round){ g.appendChild(el('ellipse',{class:'shape '+it.type,cx:x+w/2,cy:y+h/2,rx:w/2,ry:h/2})); }
+    else{ g.appendChild(el('rect',{class:'shape '+it.type,x,y,width:w,height:h,rx:2})); }
+    if(it.type==='tall'&&!it.round){ g.appendChild(el('line',{class:'tallmark',x1:x,y1:y,x2:x+w,y2:y+h})); }
+    if(it.label){
+      const vert=h>w*1.6;
+      const t=el('text',{x:x+w/2,y:y+h/2+3.2,'text-anchor':'middle'});
+      if(vert)t.setAttribute('transform',`rotate(-90 ${x+w/2} ${y+h/2})`);
+      if(Math.max(w,h)>it.label.length*6.2)t.textContent=it.label;
+      g.appendChild(t);
+    }
+    const n=(imgStore['item:'+it.id]||[]).length;
+    if(n){ const b=el('g',{class:'imgbadge'});
+      b.appendChild(el('circle',{cx:x+w-2,cy:y+2,r:7.5}));
+      const t=el('text',{x:x+w-2,y:y+5,'text-anchor':'middle'});t.textContent=n;b.appendChild(t);
+      b.style.cursor='pointer';
+      b.addEventListener('pointerdown',e=>e.stopPropagation());
+      b.addEventListener('click',e=>{e.stopPropagation();openDrawer('item:'+it.id,it.label||'Piece');});
+      g.appendChild(b); }
+    attachDrag(g,it);
+    gItems.appendChild(g);
+  });
+  syncToolbar();
+}
+function svgPoint(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function attachDrag(g,it){
+  g.addEventListener('pointerdown',e=>{
+    e.preventDefault();select(it.id);
+    if(READONLY)return;
+    const start=svgPoint(e),ox=it.x,oy=it.y;let moved=false;
+    g.classList.add('dragging');g.setPointerCapture(e.pointerId);
+    const mv=ev=>{const p=svgPoint(ev);
+      const nx=Math.round((ox+(p.x-start.x)/S)*20)/20, ny=Math.round((oy+(p.y-start.y)/S)*20)/20;
+      if(nx!==it.x||ny!==it.y){it.x=nx;it.y=ny;moved=true;renderItems();}
+    };
+    const up=()=>{g.classList.remove('dragging');g.removeEventListener('pointermove',mv);g.removeEventListener('pointerup',up);g.removeEventListener('pointercancel',up);
+      if(moved){markDirty();}};
+    g.addEventListener('pointermove',mv);g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+  });
+}
+svg.addEventListener('pointerdown',e=>{ if(e.target===svg||e.target.closest('g')===gBase)select(null); });
+function select(id){selectedId=id;renderItems();}
+function cur(){return items.find(i=>i.id===selectedId);}
+
+/* toolbar */
+const tb=document.getElementById('toolbar');
+function syncToolbar(){
+  const it=cur();
+  tb.classList.toggle('show',!!it&&!READONLY);
+  if(!it)return;
+  document.getElementById('tLabel').value=it.label||'';
+  document.getElementById('tType').value=it.type;
+  document.getElementById('tW').value=Math.round(it.w*1000);
+  document.getElementById('tD').value=Math.round(it.d*1000);
+}
+function markDirty(){dirty=true;updateSave();}
+function updateSave(){const b=document.getElementById('saveBtn');b.disabled=!dirty||READONLY;}
+document.getElementById('tLabel').addEventListener('input',e=>{const it=cur();if(it){it.label=e.target.value.toUpperCase();markDirty();renderItems();}});
+document.getElementById('tType').addEventListener('change',e=>{const it=cur();if(it){it.type=e.target.value;markDirty();renderItems();}});
+document.getElementById('tW').addEventListener('change',e=>{const it=cur();if(it){it.w=Math.max(100,+e.target.value||600)/1000;markDirty();renderItems();}});
+document.getElementById('tD').addEventListener('change',e=>{const it=cur();if(it){it.d=Math.max(50,+e.target.value||600)/1000;markDirty();renderItems();}});
+document.getElementById('tRot').addEventListener('click',()=>{const it=cur();if(!it)return;
+  const cx=it.x+it.w/2,cy=it.y+it.d/2,w=it.d,d=it.w;
+  it.w=w;it.d=d;it.x=Math.round((cx-w/2)*20)/20;it.y=Math.round((cy-d/2)*20)/20;markDirty();renderItems();});
+document.getElementById('tDup').addEventListener('click',()=>{const it=cur();if(!it)return;
+  const c={...it,id:'it'+Date.now().toString(36),x:it.x+0.2,y:it.y+0.2};items.push(c);selectedId=c.id;markDirty();renderItems();});
+document.getElementById('tDel').addEventListener('click',()=>{const it=cur();if(!it)return;
+  items=items.filter(i=>i.id!==it.id);selectedId=null;markDirty();renderItems();});
+document.getElementById('tImg').addEventListener('click',()=>{const it=cur();if(it)openDrawer('item:'+it.id,it.label||'Piece');});
+
+/* palette */
+const pal=document.getElementById('palette');
+PRESETS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p[0];pal.appendChild(o);});
+document.getElementById('addBtn').addEventListener('click',()=>{
+  if(READONLY)return;
+  const p=PRESETS[+pal.value];
+  const it={id:'it'+Date.now().toString(36),label:p[0].replace(/ [\d.×xm]+m?$/,'').toUpperCase(),type:p[1],x:7.2,y:1.4,w:p[2],d:p[3]};
+  if(p[4]==='round')it.round=true;
+  if(it.type==='appl')it.label=p[0]==='Fridge'?'F':p[0]==='Washer'?'WM':'TV';
+  items.push(it);selectedId=it.id;markDirty();renderItems();
+  toast("Added — drag it into place");
+});
+document.getElementById('saveBtn').addEventListener('click',saveState);
+document.getElementById('exportBtn').addEventListener('click',()=>{
+  const blob=new Blob([JSON.stringify({v:1,items},null,1)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='home-layout.json';a.click();
+});
+
+/* ================= images drawer ================= */
+const drawer=document.getElementById('drawer');
+let drawerKey=null,drawerTitle='';
+function openDrawer(key,title){drawerKey=key;drawerTitle=title;renderDrawer();drawer.classList.add('open');}
+document.getElementById('drClose').addEventListener('click',()=>{drawer.classList.remove('open');drawerKey=null;});
+function renderDrawer(){
+  document.getElementById('drTitle').textContent=`📷 ${drawerTitle}`;
+  const list=imgStore[drawerKey]||[];
+  const grid=document.getElementById('drGrid');
+  grid.innerHTML=list.map(p=>`<figure class="dpin"><img src="${p.url}" loading="lazy" onclick="openLB('${p.url}')">${READONLY?'':`<button class="rm" onclick="delImg(${p.id},'${p.url}')">×</button>`}</figure>`).join('');
+  document.getElementById('drEmpty').style.display=list.length?'none':'block';
+  document.getElementById('drAdd').style.display=READONLY?'none':'inline-block';
+}
+const fileInput=document.getElementById('file');
+document.getElementById('drAdd').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',async e=>{
+  if(!e.target.files.length||!drawerKey||!sb)return;
+  toast("Uploading…");
+  for(const f of e.target.files){
+    try{
+      const blob=await compressBlob(f);
+      const path=`layout/${drawerKey.replace(':','-')}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+      const up=await sb.storage.from('board').upload(path,blob,{contentType:'image/jpeg',upsert:false});
+      if(up.error)throw up.error;
+      const url=sb.storage.from('board').getPublicUrl(path).data.publicUrl;
+      const ins=await sb.from('pins').insert({room:'layout:'+drawerKey,section:SEC,url});
+      if(ins.error)throw ins.error;
+    }catch(err){alert("Upload failed: "+(err.message||err));}
+  }
+  fileInput.value='';await refreshImagesOnly();toast("Image added");
+});
+window.delImg=async function(id,url){
+  if(!sb)return;
+  try{const path=decodeURIComponent((url||'').split('/board/')[1]||'');
+    if(path)await sb.storage.from('board').remove([path]);
+    await sb.from('pins').delete().eq('id',id);
+  }catch(e){}
+  await refreshImagesOnly();
+};
+const lb=document.getElementById('lb');
+window.openLB=function(src){lb.querySelector('img').src=src;lb.classList.add('open');};
+lb.addEventListener('click',()=>lb.classList.remove('open'));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){lb.classList.remove('open');}});
+
+function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200);}
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
+  document.getElementById('saveBtn').style.display='none';}
+
+renderAreaPlus();loadAll();subscribe();
+</script>
+</body>
+</html>
