@@ -93,6 +93,9 @@
   .toolbar input[type=text]{width:150px}
   .tb-danger{color:#a33;border-color:#e0bcbc}
   .tb-danger:hover{border-color:#a33}
+  .verdel{color:#a33}
+  .verdel:hover{border-color:#a33}
+  #verSel{max-width:210px}
 
   /* legend */
   .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:16px}
@@ -168,7 +171,7 @@
 <body>
 <header>
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
-  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
+  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. Keep alternatives with <b>＋ Save version</b> and switch between them from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. <b>Every room AND every piece has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
   <div class="bar">
@@ -178,6 +181,9 @@
     <select id="palette"></select>
     <button id="addBtn">+ Add piece</button>
     <button id="addWallBtn">+ Add wall</button>
+    <select id="verSel" title="Saved layouts"><option value="">Saved layouts…</option></select>
+    <button id="verSave">＋ Save version</button>
+    <button id="verDel" class="verdel">🗑 Delete version</button>
     <button id="undoBtn" disabled>↶ Undo</button>
     <button id="resetBtn">↺ Reset to plan</button>
     <button id="exportBtn">Export JSON</button>
@@ -386,7 +392,8 @@ const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
 // Reuses the existing pins table. Layout rows are namespaced by room key so the main board ignores them:
 //   state  -> room 'layout:state'        url = JSON of items
 //   images -> room 'layout:item:<id>' or 'layout:area:<room>'   url = storage public URL
-const STATE_ROOM='layout:state', SEC='inspiration';
+const STATE_ROOM='layout:state', SEC='inspiration', VER_PREFIX='layout:ver:';
+let versions=[];   // [{rowId,name,updated,items,walls}] — named snapshots, separate from the live layout
 let imgStore={}; // key -> [{id,url}]
 function setSync(t,off){const s=document.getElementById('sync');if(s){s.textContent=t;s.classList.toggle('off',!!off);}}
 
@@ -395,11 +402,16 @@ async function loadAll(){
   try{
     const {data,error}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').order('created_at');
     if(error)throw error;
-    imgStore={};let stateRow=null;
+    imgStore={};let stateRow=null;versions=[];
     (data||[]).forEach(p=>{
       if(p.room===STATE_ROOM){stateRow=p;return;}
+      if(p.room.startsWith(VER_PREFIX)){
+        try{const v=JSON.parse(p.url);versions.push({rowId:p.id,name:v.name||'Untitled',updated:v.updated,items:v.items,walls:v.walls});}catch(e){}
+        return;
+      }
       const key=p.room.slice(7); (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
     });
+    renderVersions();
     if(stateRow){
       try{ const st=JSON.parse(stateRow.url);
         items = st.items || structuredClone(seedItems);
@@ -413,6 +425,65 @@ async function loadAll(){
     if(drawerKey)renderDrawer();
   }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();}}
 }
+/* ================= named versions =================
+   Snapshots live alongside the layout as `layout:ver:*` rows. Loading one only changes
+   what YOU see — it isn't shared until you press Save layout. Images stay common to all. */
+function renderVersions(){
+  const sel=document.getElementById('verSel');if(!sel)return;
+  const keep=sel.value;
+  versions.sort((a,b)=>String(b.updated||'').localeCompare(String(a.updated||'')));
+  sel.innerHTML='<option value="">Saved layouts…</option>'+
+    versions.map(v=>{
+      const d=v.updated?new Date(v.updated).toLocaleDateString('en-SG',{day:'numeric',month:'short'}):'';
+      return `<option value="${v.rowId}">${esc(v.name)}${d?' · '+d:''}</option>`;
+    }).join('');
+  if(versions.some(v=>String(v.rowId)===keep))sel.value=keep;
+  document.getElementById('verDel').disabled=!sel.value;
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function saveVersion(){
+  if(!sb)return alert("Sync isn't connected.");
+  const name=(prompt("Name this layout version:","")||"").trim();
+  if(!name)return;
+  try{
+    const url=JSON.stringify({v:2,name,updated:new Date().toISOString(),items,walls:wallSegs});
+    const ins=await sb.from('pins').insert({room:VER_PREFIX+Date.now(),section:SEC,url}).select('id').single();
+    if(ins.error)throw ins.error;
+    versions.push({rowId:ins.data.id,name,updated:new Date().toISOString(),items:structuredClone(items),walls:structuredClone(wallSegs)});
+    renderVersions();document.getElementById('verSel').value=String(ins.data.id);
+    document.getElementById('verDel').disabled=false;
+    toast('Saved version "'+name+'"');
+  }catch(e){alert("Couldn't save version: "+(e.message||e));}
+}
+function loadVersion(rowId){
+  const v=versions.find(x=>String(x.rowId)===String(rowId));if(!v)return;
+  if(dirty&&!confirm("You have unsaved changes. Load \""+v.name+"\" and discard them?")){
+    document.getElementById('verSel').value='';return;
+  }
+  pushHistory(snapshot());
+  items=structuredClone(v.items);wallSegs=structuredClone(v.walls);
+  wallSeq=wallSegs.reduce((m,w)=>Math.max(m,(+String(w.id).replace(/\D/g,''))+1||0),0);
+  selectedId=null;selWall=null;markDirty();renderItems();renderWalls();
+  document.getElementById('verDel').disabled=false;
+  toast('Loaded "'+v.name+'" — press Save layout to make it the shared one');
+}
+async function deleteVersion(){
+  const sel=document.getElementById('verSel');const id=sel.value;if(!id)return;
+  const v=versions.find(x=>String(x.rowId)===String(id));if(!v)return;
+  if(!confirm('Delete the saved version "'+v.name+'"? The layout on screen is not affected.'))return;
+  try{
+    await sb.from('pins').delete().eq('id',v.rowId);
+    versions=versions.filter(x=>x.rowId!==v.rowId);
+    sel.value='';renderVersions();toast('Deleted "'+v.name+'"');
+  }catch(e){alert("Couldn't delete: "+(e.message||e));}
+}
+document.getElementById('verSave').addEventListener('click',saveVersion);
+document.getElementById('verDel').addEventListener('click',deleteVersion);
+document.getElementById('verSel').addEventListener('change',e=>{
+  if(e.target.value)loadVersion(e.target.value);
+  else document.getElementById('verDel').disabled=true;
+});
+
 async function saveState(){
   if(!sb)return alert("Sync isn't connected.");
   const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent="Saving…";
@@ -429,7 +500,9 @@ function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{ev
 async function refreshImagesOnly(){
   if(!sb)return;
   try{const {data}=await sb.from('pins').select('id,room,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
-    imgStore={};(data||[]).forEach(p=>{const key=p.room.slice(7);(imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
+    imgStore={};(data||[]).forEach(p=>{
+      if(p.room.startsWith(VER_PREFIX))return;
+      const key=p.room.slice(7);(imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
     renderItems();renderAreaPlus();if(drawerKey)renderDrawer();
   }catch(e){}
 }
@@ -868,6 +941,8 @@ window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.return
 if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
   document.getElementById('addWallBtn').style.display='none';
   document.getElementById('resetBtn').style.display='none';
+  document.getElementById('verSave').style.display='none';
+  document.getElementById('verDel').style.display='none';
   document.getElementById('saveBtn').style.display='none';}
 
 wallSegs=seedWalls();renderWalls();renderAreaPlus();loadAll();subscribe();
