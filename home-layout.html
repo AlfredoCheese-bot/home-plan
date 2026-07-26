@@ -130,6 +130,7 @@
     <select id="palette"></select>
     <button id="addBtn">+ Add piece</button>
     <button id="addWallBtn">+ Add wall</button>
+    <button id="resetBtn">↺ Reset to plan</button>
     <button id="exportBtn">Export JSON</button>
     <button id="saveBtn" class="primary" disabled>Save layout</button>
   </div>
@@ -208,35 +209,54 @@
 const S=100;
 const READONLY=new URLSearchParams(location.search).has('view');
 const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"};
+// Traced from Taccuino "Proposed Layout 3" (1:100). Bays 3250|2815|2815|3215 = 12095 overall.
+// Left depth 4650+2000+2715 = 9365. Right bay is 7015 deep and set back 1.29 m (notched corner).
 const roomsFill=[
- {id:"master",n:"MAIN BEDROOM",x:0,z:0,w:2.975,d:4.635,cat:"bed"},
- {id:"bed2",n:"BEDROOM 2",x:2.975,z:0,w:2.805,d:3.49,cat:"bed"},
- {id:"living",n:"LIVING",x:5.78,z:0,w:6.57,d:3.49,cat:"live",merged:true},
- {id:"dining",n:"DINING",x:8.585,z:3.49,w:3.765,d:3.32,cat:"live",partOf:"living"},
- {id:"ensuite",n:"ENSUITE",x:0,z:4.635,w:2.34,d:1.83,cat:"wet"},
- {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.6,d:1.83,cat:"wet"},
- {id:"shelter",n:"HH SHELTER",x:3.94,z:4.635,w:2.015,d:1.535,cat:"wet"},
- {id:"kitchen",n:"KITCHEN",x:3.62,z:6.465,w:3.685,d:2.0,cat:"serv"},
- {id:"yard",n:"YARD",x:2.13,z:6.465,w:1.49,d:2.0,cat:"serv"},
- {id:"ledge",n:"A/C LEDGE",x:0,z:6.465,w:2.1,d:0.667,cat:"serv",util:true},
+ {id:"master", n:"MAIN BEDROOM", x:0,    z:0,    w:3.25, d:4.65, cat:"bed"},
+ {id:"bed2",   n:"BEDROOM 2",    x:3.25, z:0,    w:2.815,d:3.40, cat:"bed"},
+ {id:"living", n:"LIVING",       x:6.065,z:0,    w:2.815,d:3.40, cat:"live"},      // old Bed 3 — merged
+ {id:"living2",n:"LIVING / DINING",x:8.88,z:1.29,w:3.215,d:7.015,cat:"live",partOf:"living"},
+ {id:"corridor",n:"",            x:3.25, z:3.40, w:5.63, d:1.25, cat:"serv",util:true},
+ {id:"ensuite",n:"ENSUITE",      x:0.65, z:4.65, w:2.74, d:2.00, cat:"wet"},
+ {id:"ensbath",n:"BATH / WC",    x:3.52, z:4.65, w:2.27, d:2.00, cat:"wet"},
+ {id:"shelter",n:"HH SHELTER",   x:6.00, z:4.65, w:2.43, d:2.00, cat:"wet"},
+ {id:"yard",   n:"YARD",         x:3.52, z:6.65, w:1.51, d:2.42, cat:"serv"},
+ {id:"kitchen",n:"KITCHEN",      x:5.03, z:6.65, w:3.77, d:2.42, cat:"serv"},
+ {id:"ledge",  n:"A/C LEDGE",    x:0.65, z:6.65, w:2.41, d:1.00, cat:"serv",util:true},
 ];
 // wall segments [x1,y1,x2,y2] — structural + retained partitions (door gaps omitted at this scale)
 const rawWalls=[
- [0,0,12.35,0],[12.35,0,12.35,6.81],                       // top + right
- [12.35,6.81,8.585,6.81],                                  // living bottom (entrance on this run)
- [8.585,6.81,8.585,4.635],                                 // dining|foyer-kitchen wall
- [7.305,6.465,7.305,8.465],[7.305,8.465,2.13,8.465],       // kitchen right + bottom
- [2.13,8.465,2.13,6.465],[2.13,6.465,0,6.465],[0,6.465,0,0], // yard left, ledge line, left
- [2.975,0,2.975,4.635],                                    // master | bed2 wall
- [5.78,0,5.78,3.49],                                       // bed2 | living — RETAINED TV wall
- [2.975,3.49,5.78,3.49],                                   // bed2 bottom (corridor)
- [0,4.635,5.955,4.635],                                    // corridor | service core
- [2.34,4.635,2.34,6.465],[3.94,4.635,3.94,6.17],           // ensuite|bath, bath|shelter
- [5.955,4.635,5.955,6.17],[3.94,6.17,5.955,6.17],          // shelter right + bottom
- [3.62,6.465,7.305,6.465],                                 // kitchen top
+ // ---- exterior envelope ----
+ [0,0, 8.88,0],                       // top facade (bedrooms + old bed 3)
+ [8.88,0, 8.88,1.29],                 // bed-3 right wall above the notch
+ [8.88,1.29, 12.095,1.29],            // living bay facade (set back)
+ [12.095,1.29, 12.095,8.30],          // right wall
+ [12.095,8.30, 8.80,8.30],            // living/dining bottom — entrance door on this run
+ [8.80,8.30, 8.80,9.07],              // step down to kitchen
+ [8.80,9.07, 3.52,9.07],              // kitchen + yard bottom
+ [3.52,9.07, 3.52,6.65],              // yard left
+ [3.06,6.65, 0.65,6.65],              // service-core bottom (over the ledge)
+ [0.65,6.65, 0.65,4.65],              // bath block left
+ [0.65,4.65, 0,4.65],                 // return to left wall
+ [0,4.65, 0,0],                       // left wall
+ [0.65,7.65, 3.06,7.65],[3.06,7.65, 3.06,6.65],   // a/c ledge
+ // ---- internal ----
+ [3.25,0, 3.25,4.65],                 // master | bedroom 2
+ [6.065,0, 6.065,3.40],               // bedroom 2 | old bed 3 — RETAINED, this is the TV wall
+ [3.25,3.40, 6.065,3.40],             // bedroom 2 bottom (to corridor)
+ [0,4.65, 8.88,4.65],                 // corridor | service core
+ [3.39,4.65, 3.39,6.65],              // ensuite | common bath
+ [5.79,4.65, 5.79,6.65],              // common bath | shelter
+ [6.00,4.65, 6.00,6.65],[8.43,4.65, 8.43,6.65],   // shelter RC walls
+ [8.88,4.65, 8.88,6.65],              // service core | living bay
+ [8.80,6.65, 8.80,8.30],              // kitchen | foyer
+ [3.52,6.65, 8.80,6.65],              // kitchen + yard top
 ];
-const rawRemoved=[ [8.585,0,8.585,3.49],[5.78,3.49,8.585,3.49] ]; // old Bed-3 walls (hacked)
-const rawGlazing=[ [3.62,6.465,3.62,8.465] ];              // fluted-glass divider kitchen⇄yard
+const rawRemoved=[
+ [8.88,1.29, 8.88,3.40],              // old Bed-3 | living wall — hacked
+ [6.065,3.40, 8.88,3.40],             // old Bed-3 | corridor wall — hacked
+];
+const rawGlazing=[ [5.03,6.65, 5.03,9.07] ];       // fluted-glass divider kitchen ⇄ service yard
 let wallSeq=0;
 function seedWalls(){
   wallSeq=0;
@@ -248,42 +268,52 @@ let wallSegs=[];
 /* ================= item model ================= */
 // {id,label,type:base|tall|top|loose|appl|rug, x,y,w,d, round?, area?}
 const seedItems=[
- // living (merged)
- {id:"tv",     label:"TV",        type:"appl", x:5.85,y:1.28,w:0.12,d:1.45},
- {id:"tvcons", label:"TV CONSOLE",type:"base", x:5.99,y:0.85,w:0.45,d:2.55},
- {id:"rugA",   label:"",          type:"rug",  x:6.55,y:0.55,w:3.05,d:2.75},
- {id:"sofa",   label:"SOFA L",    type:"loose",x:7.95,y:0.72,w:1.05,d:2.75},
- {id:"cof1",   label:"",          type:"loose",x:6.95,y:1.35,w:0.7,d:0.7,round:true},
- {id:"cof2",   label:"",          type:"loose",x:7.0,y:2.2,w:0.5,d:0.5,round:true},
- {id:"rugB",   label:"",          type:"rug",  x:9.95,y:0.5,w:2.15,d:2.7},
- {id:"arm1",   label:"CHAIR",     type:"loose",x:10.5,y:0.7,w:0.8,d:0.85},
- {id:"arm2",   label:"CHAIR",     type:"loose",x:10.5,y:2.15,w:0.8,d:0.85},
- {id:"sidet",  label:"",          type:"loose",x:10.65,y:1.5,w:0.55,d:0.55,round:true},
- // dining + foyer
- {id:"dine",   label:"DINING 6",  type:"loose",x:10.3,y:4.3,w:1.0,d:1.9},
- {id:"sideb",  label:"SIDEBOARD", type:"base", x:8.72,y:4.45,w:0.45,d:1.8},
- {id:"shoe",   label:"SHOE",      type:"tall", x:9.5,y:6.32,w:1.2,d:0.38},
- // kitchen (galley) — finalized scheme
- {id:"kcT",    label:"COUNTER",   type:"base", x:3.72,y:6.5,w:2.75,d:0.6},
- {id:"khT",    label:"TOP-HUNG",  type:"top",  x:3.72,y:6.5,w:2.75,d:0.35},
- {id:"kcB",    label:"COUNTER",   type:"base", x:3.72,y:7.83,w:3.5,d:0.6},
- {id:"khB",    label:"TOP-HUNG",  type:"top",  x:3.72,y:7.83,w:3.5,d:0.35},
- {id:"fridge", label:"F",         type:"appl", x:6.52,y:6.5,w:0.75,d:0.72},
- {id:"wm",     label:"WM",        type:"appl", x:2.55,y:7.85,w:0.6,d:0.62},
- // master
- {id:"bedQ",   label:"BED",       type:"loose",x:0.72,y:0.85,w:1.6,d:2.0},
- {id:"bs1",    label:"",          type:"loose",x:0.18,y:0.9,w:0.5,d:0.42},
- {id:"bs2",    label:"",          type:"loose",x:2.38,y:0.9,w:0.5,d:0.42},
- {id:"wardM",  label:"WARDROBE",  type:"tall", x:0.18,y:3.95,w:2.4,d:0.6},
- // bedroom 2
- {id:"desk2",  label:"DESK",      type:"base", x:3.12,y:0.18,w:1.4,d:0.58},
- {id:"top2",   label:"SHELF",     type:"top",  x:3.12,y:0.18,w:1.4,d:0.32},
- {id:"bed2b",  label:"DAYBED",    type:"loose",x:3.08,y:2.42,w:2.0,d:0.95},
- {id:"ward2",  label:"WARDROBE",  type:"tall", x:5.12,y:0.18,w:0.6,d:1.5},
- // shelter + baths
- {id:"izak",   label:"IZAKAYA DESK",type:"base",x:3.99,y:5.62,w:1.9,d:0.48},
- {id:"vanE",   label:"VANITY",    type:"base", x:0.22,y:4.72,w:0.9,d:0.5},
- {id:"vanB",   label:"VANITY",    type:"base", x:2.42,y:4.72,w:0.8,d:0.5},
+ // ---- MASTER BEDROOM ----
+ {id:"wardM1", label:"WARDROBE",  type:"tall", x:0.08,y:0.35,w:0.55,d:2.55},
+ {id:"bedQ",   label:"BED",       type:"loose",x:0.70,y:0.65,w:1.95,d:1.60},
+ {id:"wardM2", label:"WARDROBE",  type:"tall", x:0.20,y:3.00,w:0.75,d:1.60},
+ {id:"rugM",   label:"",          type:"rug",  x:1.05,y:2.95,w:1.65,d:1.60,round:true},
+ {id:"wardM3", label:"WARDROBE",  type:"tall", x:2.65,y:0.15,w:0.55,d:1.55},
+ // ---- BEDROOM 2 ----
+ {id:"rug2",   label:"",          type:"rug",  x:3.58,y:0.20,w:2.40,d:1.60},
+ {id:"ch2",    label:"CHAIR",     type:"loose",x:3.85,y:0.50,w:0.95,d:0.85},
+ {id:"tb2",    label:"",          type:"loose",x:4.85,y:0.88,w:0.58,d:0.48},
+ // ---- LIVING — old Bed 3 bay (TV on the retained party wall) ----
+ {id:"tv",     label:"TV",        type:"appl", x:6.09,y:1.05,w:0.10,d:1.45},
+ {id:"tvcons", label:"TV CONSOLE",type:"base", x:6.19,y:0.75,w:0.45,d:2.10},
+ {id:"rugA",   label:"",          type:"rug",  x:6.25,y:0.25,w:2.45,d:2.95},
+ {id:"sofa",   label:"SOFA L",    type:"loose",x:7.32,y:0.45,w:1.35,d:2.55},
+ {id:"sofaC",  label:"",          type:"loose",x:6.30,y:2.35,w:1.05,d:0.95},
+ {id:"cof1",   label:"",          type:"loose",x:6.75,y:1.05,w:0.62,d:0.62,round:true},
+ {id:"cof2",   label:"",          type:"loose",x:6.80,y:1.72,w:0.55,d:0.55,round:true},
+ // ---- LIVING — right bay (window seating + dining) ----
+ {id:"rugB",   label:"",          type:"rug",  x:8.97,y:1.60,w:2.62,d:2.02},
+ {id:"arm1",   label:"CHAIR",     type:"loose",x:9.05,y:1.86,w:0.88,d:0.84},
+ {id:"arm2",   label:"CHAIR",     type:"loose",x:10.48,y:1.86,w:0.88,d:0.84},
+ {id:"sidet",  label:"",          type:"loose",x:9.90,y:2.72,w:0.58,d:0.58,round:true},
+ {id:"tallR",  label:"FEATURE / STORAGE",type:"tall",x:11.62,y:1.62,w:0.42,d:6.20},
+ {id:"dine",   label:"DINING 6",  type:"loose",x:9.85,y:4.70,w:0.92,d:1.80},
+ {id:"shoe",   label:"SHOE",      type:"tall", x:11.10,y:7.05,w:0.48,d:0.92},
+ // ---- KITCHEN (galley) + YARD ----
+ {id:"kcT",    label:"COUNTER",   type:"base", x:5.06,y:6.72,w:3.68,d:0.60},
+ {id:"khT",    label:"TOP-HUNG",  type:"top",  x:5.06,y:6.72,w:3.68,d:0.35},
+ {id:"fridge", label:"F",         type:"appl", x:5.16,y:6.76,w:0.95,d:0.72},
+ {id:"kcB",    label:"COUNTER",   type:"base", x:5.06,y:8.42,w:3.68,d:0.60},
+ {id:"khB",    label:"TOP-HUNG",  type:"top",  x:5.06,y:8.42,w:3.68,d:0.35},
+ {id:"ycB",    label:"COUNTER",   type:"base", x:3.60,y:8.42,w:1.40,d:0.60},
+ {id:"wm",     label:"WM",        type:"appl", x:3.62,y:8.44,w:0.66,d:0.58},
+ // ---- HH SHELTER ----
+ {id:"izak",   label:"IZAKAYA DESK",type:"base",x:6.22,y:4.82,w:2.00,d:0.50},
+ {id:"izakB",  label:"BENCH",     type:"loose",x:6.30,y:5.85,w:1.80,d:0.55},
+ {id:"tallS",  label:"TALL",      type:"tall", x:8.46,y:4.78,w:0.40,d:1.75},
+ // ---- BATHROOMS ----
+ {id:"vanE",   label:"VANITY",    type:"base", x:0.72,y:4.80,w:0.45,d:1.45},
+ {id:"wcE",    label:"WC",        type:"appl", x:1.15,y:5.80,w:0.42,d:0.62},
+ {id:"shwE",   label:"SHOWER",    type:"rug",  x:2.45,y:4.78,w:0.90,d:1.80},
+ {id:"wcB",    label:"WC",        type:"appl", x:3.62,y:4.82,w:0.42,d:0.62},
+ {id:"vanB",   label:"VANITY",    type:"base", x:4.98,y:5.92,w:0.76,d:0.45},
+ // ---- CORRIDOR ----
+ {id:"corrC",  label:"CABINET",   type:"base", x:4.05,y:3.55,w:1.72,d:0.45},
 ];
 const PRESETS=[
  ["Base cabinet 600","base",0.6,0.6],["Counter run 1.8m","base",1.8,0.6],["Island 1.2m","base",1.2,0.8],
@@ -368,7 +398,7 @@ function compressBlob(file,max=1400,q=0.82){
 /* ================= plan render ================= */
 const svg=document.getElementById('plan');
 const NS="http://www.w3.org/2000/svg";
-svg.setAttribute('viewBox','-46 -46 1330 940');
+svg.setAttribute('viewBox','-54 -56 1320 1060');
 function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
 const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gPlus=el('g',{}),gHandles=el('g',{});
 svg.append(gBase,gWallHit,gItems,gWalls,gPlus,gHandles);
@@ -383,10 +413,17 @@ roomsFill.forEach(r=>{
   }
 });
 // corridor label
-const cor=el('text',{class:'rdim',x:5.2*S,y:4.15*S,'text-anchor':'middle'});cor.textContent='CORRIDOR';gBase.appendChild(cor);
+const cor=el('text',{class:'rdim',x:6.4*S,y:4.12*S,'text-anchor':'middle'});cor.textContent='CORRIDOR';gBase.appendChild(cor);
 // overall dims
-const d1=el('text',{class:'odim',x:6.175*S,y:-18,'text-anchor':'middle'});d1.textContent='12.35 m';gBase.appendChild(d1);
-const d2=el('text',{class:'odim',x:-20,y:4.23*S,'text-anchor':'middle',transform:`rotate(-90 -20 ${4.23*S})`});d2.textContent='8.47 m';gBase.appendChild(d2);
+const d1=el('text',{class:'odim',x:6.05*S,y:-22,'text-anchor':'middle'});d1.textContent='12 095';gBase.appendChild(d1);
+const d2=el('text',{class:'odim',x:-24,y:4.68*S,'text-anchor':'middle',transform:`rotate(-90 -24 ${4.68*S})`});d2.textContent='9 365';gBase.appendChild(d2);
+const d3=el('text',{class:'odim',x:12.32*S,y:4.80*S,'text-anchor':'middle',transform:`rotate(-90 ${12.32*S} ${4.80*S})`});d3.textContent='7 015';gBase.appendChild(d3);
+// bay ticks along the facade
+[[0,3.25,'3250'],[3.25,6.065,'2815'],[6.065,8.88,'2815'],[8.88,12.095,'3215']].forEach(([a,b,t])=>{
+  const y=-6;
+  gBase.appendChild(el('line',{x1:a*S,y1:y,x2:b*S,y2:y,stroke:'#b8b2a6','stroke-width':1}));
+  const tx=el('text',{class:'rdim',x:(a+b)/2*S,y:y-5,'text-anchor':'middle'});tx.textContent=t;gBase.appendChild(tx);
+});
 gWalls.style.pointerEvents='none';
 
 /* ---- walls: editable ---- */
@@ -593,6 +630,12 @@ document.getElementById('addBtn').addEventListener('click',()=>{
   toast("Added — drag it into place");
 });
 document.getElementById('saveBtn').addEventListener('click',saveState);
+document.getElementById('resetBtn').addEventListener('click',()=>{
+  if(READONLY)return;
+  if(!confirm("Reset walls and furniture back to the Taccuino Layout 3 plan? Your arrangement will be replaced (images are kept)."))return;
+  items=structuredClone(seedItems);wallSegs=seedWalls();selectedId=null;selWall=null;
+  markDirty();renderItems();renderWalls();toast("Reset to plan — press Save to share it");
+});
 document.getElementById('exportBtn').addEventListener('click',()=>{
   const blob=new Blob([JSON.stringify({v:2,items,walls:wallSegs},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='home-layout.json';a.click();
@@ -646,6 +689,7 @@ function toast(t){const el=document.getElementById('toast');el.textContent=t;el.
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
   document.getElementById('addWallBtn').style.display='none';
+  document.getElementById('resetBtn').style.display='none';
   document.getElementById('saveBtn').style.display='none';}
 
 wallSegs=seedWalls();renderWalls();renderAreaPlus();loadAll();subscribe();
