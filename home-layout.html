@@ -61,6 +61,10 @@
   .item text{font-size:9.5px;fill:#4a4640;pointer-events:none;font-weight:600;letter-spacing:.02em}
   .item .tallmark{stroke:var(--tallline);stroke-width:1;opacity:.6}
   .item.sel .shape{stroke:#111 !important;stroke-width:2.6 !important}
+  .wallhit{stroke:transparent;stroke-width:17;fill:none;cursor:move}
+  .selw{stroke:#b45f22 !important;stroke-width:8 !important}
+  .handle{fill:#fff;stroke:#b45f22;stroke-width:2.5;cursor:grab}
+  .hintsm{font-size:10.5px;color:var(--muted);font-style:italic}
   .imgbadge circle{fill:#3b6ea5}
   .imgbadge text{fill:#fff !important;font-size:8.5px !important}
 
@@ -116,7 +120,7 @@
 <body>
 <header>
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
-  <div class="sub">Walls are <b>fixed</b>. Everything else is modular — drag to move, tap to select.
+  <div class="sub">Everything is modular — <b>walls included</b>. Tap a black wall to select it, then drag it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. Tap the <b>⊕</b> on any room or the 📷 on a selected piece to attach images.</div>
   <div class="bar">
@@ -125,6 +129,7 @@
     <span style="flex:1"></span>
     <select id="palette"></select>
     <button id="addBtn">+ Add piece</button>
+    <button id="addWallBtn">+ Add wall</button>
     <button id="exportBtn">Export JSON</button>
     <button id="saveBtn" class="primary" disabled>Save layout</button>
   </div>
@@ -147,11 +152,25 @@
     <button id="tDel" class="tb-danger">✕ Remove</button>
   </div>
 
+  <div class="toolbar" id="wallbar">
+    <label>Wall</label>
+    <select id="wType">
+      <option value="wall">Structural / partition</option>
+      <option value="removed">Removed — hacked</option>
+      <option value="glazing">Glazing / glass divider</option>
+    </select>
+    <label>Length mm</label><input type="number" id="wLen" step="10" min="100">
+    <button id="wRot">⟳ Rotate 90°</button>
+    <button id="wDup">⧉ Duplicate</button>
+    <button id="wDel" class="tb-danger">✕ Remove wall</button>
+    <span class="hintsm">drag the wall to move · drag an orange end-dot to change length or angle</span>
+  </div>
+
   <div class="planscroll"><svg id="plan" aria-label="Modular floor plan"></svg></div>
 
   <div class="legend">
-    <div class="lgbox"><h3>Structure (fixed)</h3>
-      <div class="lgrow"><span class="sw wall"></span>Structural / retained wall</div>
+    <div class="lgbox"><h3>Structure (editable)</h3>
+      <div class="lgrow"><span class="sw wall"></span>Structural / retained wall — tap to edit</div>
       <div class="lgrow"><span class="sw rem"></span>Wall removed — Bed 3 merged into living</div>
       <div class="lgrow"><span class="sw glz"></span>Fluted-glass sliding divider (kitchen ⇄ yard)</div>
     </div>
@@ -202,7 +221,7 @@ const roomsFill=[
  {id:"ledge",n:"A/C LEDGE",x:0,z:6.465,w:2.1,d:0.667,cat:"serv",util:true},
 ];
 // wall segments [x1,y1,x2,y2] — structural + retained partitions (door gaps omitted at this scale)
-const walls=[
+const rawWalls=[
  [0,0,12.35,0],[12.35,0,12.35,6.81],                       // top + right
  [12.35,6.81,8.585,6.81],                                  // living bottom (entrance on this run)
  [8.585,6.81,8.585,4.635],                                 // dining|foyer-kitchen wall
@@ -216,8 +235,15 @@ const walls=[
  [5.955,4.635,5.955,6.17],[3.94,6.17,5.955,6.17],          // shelter right + bottom
  [3.62,6.465,7.305,6.465],                                 // kitchen top
 ];
-const wallsRemoved=[ [8.585,0,8.585,3.49],[5.78,3.49,8.585,3.49] ]; // old Bed-3 walls (hacked)
-const glazing=[ [3.62,6.465,3.62,8.465] ];                 // fluted-glass divider kitchen⇄yard
+const rawRemoved=[ [8.585,0,8.585,3.49],[5.78,3.49,8.585,3.49] ]; // old Bed-3 walls (hacked)
+const rawGlazing=[ [3.62,6.465,3.62,8.465] ];              // fluted-glass divider kitchen⇄yard
+let wallSeq=0;
+function seedWalls(){
+  wallSeq=0;
+  const mk=(kind,a)=>({id:'w'+(wallSeq++),kind,x1:a[0],y1:a[1],x2:a[2],y2:a[3]});
+  return [...rawWalls.map(a=>mk('wall',a)),...rawRemoved.map(a=>mk('removed',a)),...rawGlazing.map(a=>mk('glazing',a))];
+}
+let wallSegs=[];
 
 /* ================= item model ================= */
 // {id,label,type:base|tall|top|loose|appl|rug, x,y,w,d, round?, area?}
@@ -270,7 +296,7 @@ const PRESETS=[
  ["Fridge","appl",0.75,0.72],["Washer","appl",0.6,0.62],["TV","appl",1.45,0.12],["Plant","loose",0.45,0.45,"round"],
  ["Custom box","base",1.0,0.5],
 ];
-let items=[]; let dirty=false; let selectedId=null;
+let items=[]; let dirty=false; let selectedId=null; let selWall=null;
 
 /* ================= supabase (same project as the board) ================= */
 const SB_URL="https://bjhprlbvcjwjoyyoxbly.supabase.co";
@@ -284,7 +310,7 @@ let imgStore={}; // key -> [{id,url}]
 function setSync(t,off){const s=document.getElementById('sync');if(s){s.textContent=t;s.classList.toggle('off',!!off);}}
 
 async function loadAll(){
-  if(!sb){setSync("⚠ sync unavailable",1);items=structuredClone(seedItems);renderItems();return;}
+  if(!sb){setSync("⚠ sync unavailable",1);items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();return;}
   try{
     const {data,error}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').order('created_at');
     if(error)throw error;
@@ -293,18 +319,24 @@ async function loadAll(){
       if(p.room===STATE_ROOM){stateRow=p;return;}
       const key=p.room.slice(7); (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
     });
-    if(stateRow){ try{items=JSON.parse(stateRow.url).items||[];}catch(e){items=structuredClone(seedItems);} }
-    else items=structuredClone(seedItems);
-    dirty=false;updateSave();renderItems();renderAreaPlus();
+    if(stateRow){
+      try{ const st=JSON.parse(stateRow.url);
+        items = st.items || structuredClone(seedItems);
+        wallSegs = (st.walls && st.walls.length) ? st.walls : seedWalls();
+        wallSeq = wallSegs.reduce((m,w)=>Math.max(m,(+String(w.id).replace(/\D/g,''))+1||0),0);
+      }catch(e){ items=structuredClone(seedItems); wallSegs=seedWalls(); }
+    }
+    else { items=structuredClone(seedItems); wallSegs=seedWalls(); }
+    dirty=false;updateSave();renderItems();renderWalls();renderAreaPlus();
     setSync(READONLY?"◍ Shared layout — view only":"◍ Live sync — shared with everyone on the link");
     if(drawerKey)renderDrawer();
-  }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);renderItems();renderAreaPlus();}}
+  }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();}}
 }
 async function saveState(){
   if(!sb)return alert("Sync isn't connected.");
   const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent="Saving…";
   try{
-    const url=JSON.stringify({v:1,updated:new Date().toISOString(),items});
+    const url=JSON.stringify({v:2,updated:new Date().toISOString(),items,walls:wallSegs});
     const ins=await sb.from('pins').insert({room:STATE_ROOM,section:SEC,url}).select('id').single();
     if(ins.error)throw ins.error;
     await sb.from('pins').delete().eq('room',STATE_ROOM).neq('id',ins.data.id);
@@ -338,8 +370,8 @@ const svg=document.getElementById('plan');
 const NS="http://www.w3.org/2000/svg";
 svg.setAttribute('viewBox','-46 -46 1330 940');
 function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
-const gBase=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gPlus=el('g',{});
-svg.append(gBase,gItems,gWalls,gPlus);
+const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gPlus=el('g',{}),gHandles=el('g',{});
+svg.append(gBase,gWallHit,gItems,gWalls,gPlus,gHandles);
 
 roomsFill.forEach(r=>{
   gBase.appendChild(el('rect',{class:'rm-fill',x:r.x*S,y:r.z*S,width:r.w*S,height:r.d*S,fill:Z[r.cat],opacity:r.util?0.5:0.85}));
@@ -355,10 +387,58 @@ const cor=el('text',{class:'rdim',x:5.2*S,y:4.15*S,'text-anchor':'middle'});cor.
 // overall dims
 const d1=el('text',{class:'odim',x:6.175*S,y:-18,'text-anchor':'middle'});d1.textContent='12.35 m';gBase.appendChild(d1);
 const d2=el('text',{class:'odim',x:-20,y:4.23*S,'text-anchor':'middle',transform:`rotate(-90 -20 ${4.23*S})`});d2.textContent='8.47 m';gBase.appendChild(d2);
-walls.forEach(w=>gWalls.appendChild(el('line',{class:'wall',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
-wallsRemoved.forEach(w=>gWalls.appendChild(el('line',{class:'wall-removed',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
-glazing.forEach(w=>gWalls.appendChild(el('line',{class:'glazing',x1:w[0]*S,y1:w[1]*S,x2:w[2]*S,y2:w[3]*S})));
 gWalls.style.pointerEvents='none';
+
+/* ---- walls: editable ---- */
+const WCLS={wall:'wall',removed:'wall-removed',glazing:'glazing'};
+function renderWalls(){
+  gWallHit.innerHTML='';gWalls.innerHTML='';gHandles.innerHTML='';
+  wallSegs.forEach(w=>{
+    gWalls.appendChild(el('line',{class:WCLS[w.kind]+(w.id===selWall?' selw':''),
+      x1:w.x1*S,y1:w.y1*S,x2:w.x2*S,y2:w.y2*S}));
+    const hit=el('line',{class:'wallhit',x1:w.x1*S,y1:w.y1*S,x2:w.x2*S,y2:w.y2*S});
+    attachWallDrag(hit,w);gWallHit.appendChild(hit);
+  });
+  const w=wallSegs.find(x=>x.id===selWall);
+  if(w&&!READONLY){addHandle(w,1);addHandle(w,2);}
+  syncWallBar();
+}
+function attachWallDrag(hit,w){
+  hit.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();selectWall(w.id);
+    if(READONLY)return;
+    const start=svgPoint(e),o={x1:w.x1,y1:w.y1,x2:w.x2,y2:w.y2};let moved=false;
+    hit.setPointerCapture(e.pointerId);
+    const mv=ev=>{const p=svgPoint(ev);
+      const sx=Math.round((o.x1+(p.x-start.x)/S)*20)/20-o.x1;
+      const sy=Math.round((o.y1+(p.y-start.y)/S)*20)/20-o.y1;
+      if(sx||sy||moved){w.x1=o.x1+sx;w.y1=o.y1+sy;w.x2=o.x2+sx;w.y2=o.y2+sy;moved=true;renderWalls();}
+    };
+    const up=()=>{hit.removeEventListener('pointermove',mv);hit.removeEventListener('pointerup',up);
+      hit.removeEventListener('pointercancel',up);if(moved)markDirty();};
+    hit.addEventListener('pointermove',mv);hit.addEventListener('pointerup',up);hit.addEventListener('pointercancel',up);
+  });
+}
+function addHandle(w,which){
+  const h=el('circle',{class:'handle',cx:(which===1?w.x1:w.x2)*S,cy:(which===1?w.y1:w.y2)*S,r:7.5});
+  h.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();if(READONLY)return;
+    h.setPointerCapture(e.pointerId);let moved=false;
+    const mv=ev=>{const p=svgPoint(ev);
+      let nx=Math.round((p.x/S)*20)/20, ny=Math.round((p.y/S)*20)/20;
+      const ox=which===1?w.x2:w.x1, oy=which===1?w.y2:w.y1;
+      if(Math.abs(nx-ox)<0.12)nx=ox;          // snap to vertical
+      if(Math.abs(ny-oy)<0.12)ny=oy;          // snap to horizontal
+      if(nx===ox&&ny===oy)return;             // don't collapse to zero length
+      if(which===1){w.x1=nx;w.y1=ny;}else{w.x2=nx;w.y2=ny;}
+      moved=true;renderWalls();
+    };
+    const up=()=>{h.removeEventListener('pointermove',mv);h.removeEventListener('pointerup',up);
+      h.removeEventListener('pointercancel',up);if(moved)markDirty();};
+    h.addEventListener('pointermove',mv);h.addEventListener('pointerup',up);h.addEventListener('pointercancel',up);
+  });
+  gHandles.appendChild(h);
+}
 
 /* area ⊕ buttons */
 const AREAS=roomsFill.filter(r=>!r.util);
@@ -423,9 +503,14 @@ function attachDrag(g,it){
     g.addEventListener('pointermove',mv);g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
   });
 }
-svg.addEventListener('pointerdown',e=>{ if(e.target===svg||e.target.closest('g')===gBase)select(null); });
-function select(id){selectedId=id;renderItems();}
+svg.addEventListener('pointerdown',e=>{
+  if(e.target.closest('.item,.wallhit,.handle,.areaplus,.imgbadge'))return;
+  select(null);
+});
+function select(id){selectedId=id;selWall=null;renderItems();renderWalls();}
+function selectWall(id){selWall=id;selectedId=null;renderItems();renderWalls();}
 function cur(){return items.find(i=>i.id===selectedId);}
+function curWall(){return wallSegs.find(w=>w.id===selWall);}
 
 /* toolbar */
 const tb=document.getElementById('toolbar');
@@ -453,6 +538,48 @@ document.getElementById('tDel').addEventListener('click',()=>{const it=cur();if(
   items=items.filter(i=>i.id!==it.id);selectedId=null;markDirty();renderItems();});
 document.getElementById('tImg').addEventListener('click',()=>{const it=cur();if(it)openDrawer('item:'+it.id,it.label||'Piece');});
 
+/* wall toolbar */
+const wb=document.getElementById('wallbar');
+function syncWallBar(){
+  const w=curWall();
+  wb.classList.toggle('show',!!w&&!READONLY);
+  if(!w)return;
+  document.getElementById('wType').value=w.kind;
+  document.getElementById('wLen').value=Math.round(Math.hypot(w.x2-w.x1,w.y2-w.y1)*1000);
+}
+document.getElementById('wType').addEventListener('change',e=>{const w=curWall();if(w){w.kind=e.target.value;markDirty();renderWalls();}});
+document.getElementById('wLen').addEventListener('change',e=>{
+  const w=curWall();if(!w)return;
+  const L=Math.max(0.1,(+e.target.value||1000)/1000);
+  const dx=w.x2-w.x1,dy=w.y2-w.y1,d=Math.hypot(dx,dy)||1;
+  w.x2=Math.round((w.x1+dx/d*L)*20)/20;w.y2=Math.round((w.y1+dy/d*L)*20)/20;
+  markDirty();renderWalls();
+});
+document.getElementById('wRot').addEventListener('click',()=>{
+  const w=curWall();if(!w)return;
+  const mx=(w.x1+w.x2)/2,my=(w.y1+w.y2)/2,r=(x,y)=>[mx-(y-my),my+(x-mx)];
+  const [a,b]=r(w.x1,w.y1),[c,d]=r(w.x2,w.y2);
+  w.x1=Math.round(a*20)/20;w.y1=Math.round(b*20)/20;w.x2=Math.round(c*20)/20;w.y2=Math.round(d*20)/20;
+  markDirty();renderWalls();
+});
+document.getElementById('wDup').addEventListener('click',()=>{
+  const w=curWall();if(!w)return;
+  const c={...w,id:'w'+(wallSeq++),x1:w.x1+0.2,y1:w.y1+0.2,x2:w.x2+0.2,y2:w.y2+0.2};
+  wallSegs.push(c);selWall=c.id;markDirty();renderWalls();
+});
+document.getElementById('wDel').addEventListener('click',()=>{
+  const w=curWall();if(!w)return;
+  wallSegs=wallSegs.filter(x=>x.id!==w.id);selWall=null;markDirty();renderWalls();
+  toast("Wall removed");
+});
+document.getElementById('addWallBtn').addEventListener('click',()=>{
+  if(READONLY)return;
+  const n=wallSegs.length%6;
+  const w={id:'w'+(wallSeq++),kind:'wall',x1:6.6+n*0.2,y1:1.6+n*0.2,x2:8.6+n*0.2,y2:1.6+n*0.2};
+  wallSegs.push(w);selectWall(w.id);markDirty();
+  toast("Wall added — drag it, or drag an end-dot to set length");
+});
+
 /* palette */
 const pal=document.getElementById('palette');
 PRESETS.forEach((p,i)=>{const o=document.createElement('option');o.value=i;o.textContent=p[0];pal.appendChild(o);});
@@ -467,7 +594,7 @@ document.getElementById('addBtn').addEventListener('click',()=>{
 });
 document.getElementById('saveBtn').addEventListener('click',saveState);
 document.getElementById('exportBtn').addEventListener('click',()=>{
-  const blob=new Blob([JSON.stringify({v:1,items},null,1)],{type:'application/json'});
+  const blob=new Blob([JSON.stringify({v:2,items,walls:wallSegs},null,1)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='home-layout.json';a.click();
 });
 
@@ -518,9 +645,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){lb.classList.remove
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200);}
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
+  document.getElementById('addWallBtn').style.display='none';
   document.getElementById('saveBtn').style.display='none';}
 
-renderAreaPlus();loadAll();subscribe();
+wallSegs=seedWalls();renderWalls();renderAreaPlus();loadAll();subscribe();
 </script>
 </body>
 </html>
