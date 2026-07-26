@@ -72,8 +72,13 @@
   .rhandle.nw,.rhandle.se{cursor:nwse-resize}
   .rhandle.ne,.rhandle.sw{cursor:nesw-resize}
   .hintsm{font-size:10.5px;color:var(--muted);font-style:italic}
-  .imgbadge circle{fill:#3b6ea5}
-  .imgbadge text{fill:#fff !important;font-size:8.5px !important}
+  /* per-piece image control — subtle ⊕ when empty, solid blue count when filled */
+  .imgbadge{cursor:pointer}
+  .imgbadge circle{fill:#fff;stroke:#c3bcb0;stroke-width:1.3;opacity:.9}
+  .imgbadge text{fill:#8a8378 !important;font-size:11px !important;font-weight:700;pointer-events:none}
+  .imgbadge:hover circle{stroke:var(--ink);opacity:1}
+  .imgbadge.has circle{fill:#3b6ea5;stroke:#3b6ea5;opacity:1}
+  .imgbadge.has text{fill:#fff !important;font-size:9px !important}
 
   /* toolbar */
   /* pinned to the viewport so showing it never reflows (and never shifts the plan mid-drag) */
@@ -105,6 +110,8 @@
   .sw.appl{background:#fff;border:1.4px solid var(--looseline);font-size:9px;display:grid;place-items:center;color:#4a4640;font-weight:700}
   .sw.rug{background:#f1ede3;border:1px solid #d9d2c2}
   .sw.cam{background:#3b6ea5;border-radius:50%;flex:0 0 15px;height:15px}
+  .sw.plusdot{background:#fff;border:1.3px solid #c3bcb0;border-radius:50%;flex:0 0 15px;height:15px;
+    display:grid;place-items:center;font-size:10px;font-weight:700;color:#8a8378}
 
   /* images drawer */
   .drawer{position:fixed;top:0;right:-390px;width:min(390px,94vw);height:100%;background:#fff;
@@ -163,7 +170,7 @@
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
   <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
-    <b>grey</b> = loose furniture. Tap the <b>⊕</b> on any room or the 📷 on a selected piece to attach images.</div>
+    <b>grey</b> = loose furniture. <b>Every room AND every piece has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
   <div class="bar">
     <a href="home-design-board.html">← Design board</a>
     <span class="synced" id="sync">◍ Live sync</span>
@@ -229,7 +236,8 @@
       <div class="lgrow"><span class="sw appl">F</span>Appliance — F fridge · WM washer · TV</div>
     </div>
     <div class="lgbox"><h3>Images &amp; use</h3>
-      <div class="lgrow"><span class="sw cam"></span>Blue dot = images attached (tap it)</div>
+      <div class="lgrow"><span class="sw plusdot">+</span>⊕ on a room or piece = add images</div>
+      <div class="lgrow"><span class="sw cam"></span>Blue dot = images attached (tap to view)</div>
       <div class="lgrow" style="color:#7a766e">⊕ on a room = add area images · select a piece → 📷.
         Drag to move · toolbar to resize / rotate / duplicate / remove · <b>Save</b> syncs for everyone.</div>
     </div>
@@ -572,14 +580,19 @@ function renderItems(){
       if(Math.max(w,h)>it.label.length*6.2)t.textContent=it.label;
       g.appendChild(t);
     }
+    // per-piece image control: ⊕ when empty, blue count when it has images
     const n=(imgStore['item:'+it.id]||[]).length;
-    if(n){ const b=el('g',{class:'imgbadge'});
-      b.appendChild(el('circle',{cx:x+w-2,cy:y+2,r:7.5}));
-      const t=el('text',{x:x+w-2,y:y+5,'text-anchor':'middle'});t.textContent=n;b.appendChild(t);
-      b.style.cursor='pointer';
+    const tiny=(w<22||h<22);          // too slim to carry the control; use the toolbar 📷 instead
+    if(n||(!READONLY&&!tiny)){
+      const bx=x+w-3,by=y+3;
+      const b=el('g',{class:'imgbadge'+(n?' has':'')});
+      b.appendChild(el('circle',{cx:bx,cy:by,r:8.5}));
+      const t=el('text',{x:bx,y:by+3.5,'text-anchor':'middle'});
+      t.textContent=n?n:'+';b.appendChild(t);
       b.addEventListener('pointerdown',e=>e.stopPropagation());
       b.addEventListener('click',e=>{e.stopPropagation();openDrawer('item:'+it.id,it.label||'Piece');});
-      g.appendChild(b); }
+      g.appendChild(b);
+    }
     attachDrag(g,it);
     gItems.appendChild(g);
   });
