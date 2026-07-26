@@ -41,6 +41,15 @@
   .wall{fill:none;stroke:#26241f;stroke-width:7;stroke-linecap:square}
   .wall-removed{fill:none;stroke:#c0392b;stroke-width:4;stroke-dasharray:13 8;opacity:.75}
   .glazing{fill:none;stroke:#4a8fa3;stroke-width:4;stroke-dasharray:2 5;stroke-linecap:round}
+  /* doors — the gap punches the wall so the opening reads, then the leaf sits on top */
+  .doorgap{stroke:#fbfaf7;stroke-width:9;stroke-linecap:butt}
+  .doorleaf{fill:none;stroke:#26241f;stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+  .doorarc{fill:none;stroke:#26241f;stroke-width:1.2;stroke-dasharray:4 3;opacity:.6}
+  .doorjamb{stroke:#26241f;stroke-width:5;stroke-linecap:butt}
+  .slidepanel{stroke:#26241f;stroke-width:3.6;stroke-linecap:butt}
+  .slidetrack{stroke:#26241f;stroke-width:1;stroke-dasharray:3 3;opacity:.5}
+  .door.seld .doorleaf,.door.seld .slidepanel,.door.seld .doorjamb{stroke:#b45f22}
+  .door.seld .doorarc{stroke:#b45f22;opacity:.9}
   .rlabel{font-size:12px;font-weight:700;fill:#3d3a35;pointer-events:none;letter-spacing:.04em}
   .rdim{font-size:9.5px;fill:#8a8378;pointer-events:none}
   .tagbg{fill:rgba(255,255,255,.86);stroke:rgba(0,0,0,.07);stroke-width:1}
@@ -114,6 +123,13 @@
   .sw.appl{background:#fff;border:1.4px solid var(--looseline);font-size:9px;display:grid;place-items:center;color:#4a4640;font-weight:700}
   .sw.rug{background:#f1ede3;border:1px solid #d9d2c2}
   .sw.cam{background:#3b6ea5;border-radius:50%;flex:0 0 15px;height:15px}
+  .sw.dr-sw{background:
+    linear-gradient(#26241f,#26241f) left top/2px 13px no-repeat,
+    radial-gradient(circle at 0 0,transparent 11px,#26241f 11px,#26241f 12px,transparent 12px)}
+  .sw.dr-bf{background:linear-gradient(45deg,transparent 46%,#26241f 46%,#26241f 54%,transparent 54%),
+    linear-gradient(-45deg,transparent 46%,#26241f 46%,#26241f 54%,transparent 54%)}
+  .sw.dr-sl{background:linear-gradient(#26241f,#26241f) left 3px/15px 3px no-repeat,
+    linear-gradient(#26241f,#26241f) right 10px/15px 3px no-repeat}
   .sw.plusdot{background:#fff;border:1.3px solid #c3bcb0;border-radius:50%;flex:0 0 15px;height:15px;
     display:grid;place-items:center;font-size:10px;font-weight:700;color:#8a8378}
 
@@ -182,6 +198,12 @@
     <select id="palette"></select>
     <button id="addBtn">+ Add piece</button>
     <button id="addWallBtn">+ Add wall</button>
+    <select id="doorType">
+      <option value="door">Push / swing door</option>
+      <option value="bifold">Bifold door</option>
+      <option value="slide">Sliding door</option>
+    </select>
+    <button id="addDoorBtn">+ Add door</button>
     <select id="verSel" title="Saved layouts"><option value="">Saved layouts…</option></select>
     <button id="verSave">＋ Save version</button>
     <button id="verDel" class="verdel">🗑 Delete version</button>
@@ -216,8 +238,12 @@
       <option value="wall">Structural / partition</option>
       <option value="removed">Removed — hacked</option>
       <option value="glazing">Glazing / glass divider</option>
+      <option value="door">Door — push / swing</option>
+      <option value="bifold">Door — bifold</option>
+      <option value="slide">Door — sliding</option>
     </select>
     <label>Length mm</label><input type="number" id="wLen" step="10" min="100">
+    <button id="wFlip">⇄ Flip swing</button>
     <button id="wRot">⟳ Rotate 90°</button>
     <button id="wDup">⧉ Duplicate</button>
     <button id="wDel" class="tb-danger">✕ Remove wall</button>
@@ -231,6 +257,9 @@
       <div class="lgrow"><span class="sw wall"></span>Structural / retained wall — tap to edit</div>
       <div class="lgrow"><span class="sw rem"></span>Wall removed — Bed 3 merged into living</div>
       <div class="lgrow"><span class="sw glz"></span>Fluted-glass sliding divider (kitchen ⇄ yard)</div>
+      <div class="lgrow"><span class="sw dr-sw"></span>Push / swing door — <b>⇄ Flip</b> cycles hinge &amp; side</div>
+      <div class="lgrow"><span class="sw dr-bf"></span>Bifold door</div>
+      <div class="lgrow"><span class="sw dr-sl"></span>Sliding door</div>
     </div>
     <div class="lgbox"><h3>Carpentry (movable)</h3>
       <div class="lgrow"><span class="sw base"></span>Base cabinetry / countertop</div>
@@ -562,11 +591,55 @@ gWalls.style.pointerEvents='none';
 
 /* ---- walls: editable ---- */
 const WCLS={wall:'wall',removed:'wall-removed',glazing:'glazing'};
+const DOORS={door:'Door — push / swing',bifold:'Door — bifold',slide:'Door — sliding'};
+const isDoor=k=>!!DOORS[k];
+// geometry of a segment in svg units, plus its unit vector and normal
+function seg(w){
+  const x1=w.x1*S,y1=w.y1*S,x2=w.x2*S,y2=w.y2*S;
+  const dx=x2-x1,dy=y2-y1,L=Math.hypot(dx,dy)||1;
+  return {x1,y1,x2,y2,L,ux:dx/L,uy:dy/L,nx:-dy/L,ny:dx/L};
+}
+/* flip is 0-3: bit0 = which jamb is hinged, bit1 = which side it opens */
+function doorGlyph(w,sel){
+  const g=el('g',{class:'door'+(sel?' seld':''),'data-wid':w.id});
+  const s=seg(w),f=w.flip||0,side=(f&2)?-1:1;
+  const nx=s.nx*side,ny=s.ny*side;
+  g.appendChild(el('line',{class:'doorgap',x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2}));
+  if(w.kind==='door'){
+    const atStart=!(f&1);
+    const H={x:atStart?s.x1:s.x2,y:atStart?s.y1:s.y2};
+    const J={x:atStart?s.x2:s.x1,y:atStart?s.y2:s.y1};
+    const T={x:H.x+nx*s.L,y:H.y+ny*s.L};
+    let d=Math.atan2(J.y-H.y,J.x-H.x)-Math.atan2(T.y-H.y,T.x-H.x);
+    while(d<-Math.PI)d+=2*Math.PI; while(d>Math.PI)d-=2*Math.PI;
+    g.appendChild(el('path',{class:'doorarc',d:`M ${T.x} ${T.y} A ${s.L} ${s.L} 0 0 ${d>0?1:0} ${J.x} ${J.y}`}));
+    g.appendChild(el('line',{class:'doorleaf',x1:H.x,y1:H.y,x2:T.x,y2:T.y}));
+  } else if(w.kind==='bifold'){
+    // two leaves folded into a shallow V, hinged at both jambs
+    const m={x:s.x1+s.ux*s.L/2,y:s.y1+s.uy*s.L/2};
+    const peak={x:m.x+nx*s.L*0.42,y:m.y+ny*s.L*0.42};
+    g.appendChild(el('polyline',{class:'doorleaf',points:`${s.x1},${s.y1} ${peak.x},${peak.y} ${s.x2},${s.y2}`}));
+    g.appendChild(el('line',{class:'doorjamb',x1:s.x1,y1:s.y1,x2:s.x1+s.ux*3,y2:s.y1+s.uy*3}));
+    g.appendChild(el('line',{class:'doorjamb',x1:s.x2,y1:s.y2,x2:s.x2-s.ux*3,y2:s.y2-s.uy*3}));
+  } else {  // slide — two offset panels on a track
+    const o=5*side, m={x:s.x1+s.ux*s.L/2,y:s.y1+s.uy*s.L/2};
+    const a={x:s.nx*o,y:s.ny*o}, b={x:s.nx*o*2.6,y:s.ny*o*2.6};
+    g.appendChild(el('line',{class:'slidetrack',x1:s.x1,y1:s.y1,x2:s.x2,y2:s.y2}));
+    g.appendChild(el('line',{class:'slidepanel',x1:s.x1+a.x,y1:s.y1+a.y,x2:m.x+a.x,y2:m.y+a.y}));
+    g.appendChild(el('line',{class:'slidepanel',x1:m.x+b.x,y1:m.y+b.y,x2:s.x2+b.x,y2:s.y2+b.y}));
+  }
+  return g;
+}
 function renderWalls(){
   gWallHit.innerHTML='';gWalls.innerHTML='';gHandles.innerHTML='';
+  // doors last so their gap punches the wall beneath
+  [...wallSegs].sort((a,b)=>(isDoor(a.kind)?1:0)-(isDoor(b.kind)?1:0)).forEach(w=>{
+    const sel=w.id===selWall;
+    gWalls.appendChild(isDoor(w.kind)?doorGlyph(w,sel)
+      :el('line',{class:WCLS[w.kind]+(sel?' selw':''),'data-wid':w.id,
+        x1:w.x1*S,y1:w.y1*S,x2:w.x2*S,y2:w.y2*S}));
+  });
   wallSegs.forEach(w=>{
-    gWalls.appendChild(el('line',{class:WCLS[w.kind]+(w.id===selWall?' selw':''),'data-wid':w.id,
-      x1:w.x1*S,y1:w.y1*S,x2:w.x2*S,y2:w.y2*S}));
     const hit=el('line',{class:'wallhit','data-wid':w.id,x1:w.x1*S,y1:w.y1*S,x2:w.x2*S,y2:w.y2*S});
     attachWallDrag(hit,w);gWallHit.appendChild(hit);
   });
@@ -839,8 +912,25 @@ function syncWallBar(){
   if(!w)return;
   document.getElementById('wType').value=w.kind;
   document.getElementById('wLen').value=Math.round(Math.hypot(w.x2-w.x1,w.y2-w.y1)*1000);
+  const fl=document.getElementById('wFlip');
+  fl.style.display=isDoor(w.kind)?'':'none';
+  fl.textContent=w.kind==='door'?'⇄ Flip swing':'⇄ Flip side';
 }
-document.getElementById('wType').addEventListener('change',e=>{const w=curWall();if(w){pushHistory(snapshot());w.kind=e.target.value;markDirty();renderWalls();}});
+document.getElementById('wType').addEventListener('change',e=>{
+  const w=curWall();if(!w)return;
+  pushHistory(snapshot());
+  const was=w.kind,now=e.target.value;w.kind=now;
+  if(isDoor(now)){
+    if(w.flip==null)w.flip=0;
+    // a whole wall converted to a door should shrink to a door-sized opening
+    const L=DOOR_W[now]||0.85,d=Math.hypot(w.x2-w.x1,w.y2-w.y1)||1;
+    if(!isDoor(was)&&d>L*1.6){
+      w.x2=Math.round((w.x1+(w.x2-w.x1)/d*L)*20)/20;
+      w.y2=Math.round((w.y1+(w.y2-w.y1)/d*L)*20)/20;
+    }
+  }
+  markDirty();renderWalls();
+});
 document.getElementById('wLen').addEventListener('change',e=>{
   const w=curWall();if(!w)return;
   pushHistory(snapshot());
@@ -868,6 +958,24 @@ document.getElementById('wDel').addEventListener('click',()=>{
   pushHistory(snapshot());
   wallSegs=wallSegs.filter(x=>x.id!==w.id);selWall=null;markDirty();renderWalls();
   toast("Wall removed");
+});
+document.getElementById('wFlip').addEventListener('click',()=>{
+  const w=curWall();if(!w||!isDoor(w.kind))return;
+  pushHistory(snapshot());
+  // swing doors cycle all 4 hinge/side combos; bifold & sliding only have 2 sides
+  w.flip=w.kind==='door'?(((w.flip||0)+1)%4):(((w.flip||0)+2)%4);
+  markDirty();renderWalls();
+});
+const DOOR_W={door:0.85,bifold:0.75,slide:1.20};
+document.getElementById('addDoorBtn').addEventListener('click',()=>{
+  if(READONLY)return;
+  pushHistory(snapshot());
+  const kind=document.getElementById('doorType').value;
+  const n=wallSegs.length%6, L=DOOR_W[kind]||0.85;
+  const w={id:'w'+(wallSeq++),kind,flip:0,
+    x1:6.6+n*0.2,y1:2.4+n*0.2,x2:6.6+n*0.2+L,y2:2.4+n*0.2};
+  wallSegs.push(w);selectWall(w.id);markDirty();
+  toast("Door added — drag onto a wall, ⇄ Flip to change the swing");
 });
 document.getElementById('addWallBtn').addEventListener('click',()=>{
   if(READONLY)return;
@@ -976,6 +1084,8 @@ function toast(t){const el=document.getElementById('toast');el.textContent=t;el.
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
   document.getElementById('addWallBtn').style.display='none';
+  document.getElementById('addDoorBtn').style.display='none';
+  document.getElementById('doorType').style.display='none';
   document.getElementById('resetBtn').style.display='none';
   document.getElementById('verSave').style.display='none';
   document.getElementById('verDel').style.display='none';
