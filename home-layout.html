@@ -190,7 +190,7 @@
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
   <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. Keep alternatives with <b>＋ Save version</b> and switch between them from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
-    <b>grey</b> = loose furniture. <b>Every room AND every piece has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
+    <b>grey</b> = loose furniture. <b>Every room, piece AND door has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
   <div class="bar">
     <a href="home-design-board.html">← Design board</a>
     <span class="synced" id="sync">◍ Live sync</span>
@@ -533,7 +533,7 @@ async function refreshImagesOnly(){
     imgStore={};(data||[]).forEach(p=>{
       if(p.room.startsWith(VER_PREFIX))return;
       const key=p.room.slice(7);(imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
-    renderItems();renderAreaPlus();if(drawerKey)renderDrawer();
+    renderItems();renderAreaPlus();renderDoorBadges();if(drawerKey)renderDrawer();
   }catch(e){}
 }
 function compressBlob(file,max=1400,q=0.82){
@@ -555,8 +555,8 @@ const NS="http://www.w3.org/2000/svg";
 svg.setAttribute('viewBox','-54 -56 1320 1060');
 function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
 // gLabels sits ABOVE the furniture so room names are never buried by a cabinet
-const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gLabels=el('g',{}),gPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
-svg.append(gBase,gWallHit,gItems,gWalls,gLabels,gPlus,gHandles,gIH);
+const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gLabels=el('g',{}),gPlus=el('g',{}),gDoorPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
+svg.append(gBase,gWallHit,gItems,gWalls,gLabels,gPlus,gDoorPlus,gHandles,gIH);
 gLabels.style.pointerEvents='none';
 
 // name + size on a translucent tag, tucked into the room's top-left (the ⊕ owns top-right)
@@ -645,7 +645,25 @@ function renderWalls(){
   });
   const w=wallSegs.find(x=>x.id===selWall);
   if(w&&!READONLY){addHandle(w,1);addHandle(w,2);}
+  renderDoorBadges();
   syncWallBar();
+}
+/* per-door image ⊕ — lives in its own clickable layer, since gWalls is pointer-events:none */
+function renderDoorBadges(){
+  gDoorPlus.innerHTML='';
+  wallSegs.filter(w=>isDoor(w.kind)).forEach(w=>{
+    const key='door:'+w.id, n=(imgStore[key]||[]).length;
+    if(!n&&READONLY)return;
+    const s=seg(w),side=((w.flip||0)&2)?-1:1;
+    // sit on the side away from the swing/panels so the symbol stays readable
+    const bx=(s.x1+s.x2)/2-s.nx*side*15, by=(s.y1+s.y2)/2-s.ny*side*15;
+    const g=el('g',{class:'imgbadge'+(n?' has':'')});
+    g.appendChild(el('circle',{cx:bx,cy:by,r:8.5}));
+    const t=el('text',{x:bx,y:by+3.5,'text-anchor':'middle'});t.textContent=n?n:'+';g.appendChild(t);
+    g.addEventListener('pointerdown',e=>e.stopPropagation());
+    g.addEventListener('click',e=>{e.stopPropagation();openDrawer(key,DOORS[w.kind]||'Door');});
+    gDoorPlus.appendChild(g);
+  });
 }
 /* IMPORTANT: gesture listeners go on window, never on the SVG node.
    select()/render*() rebuild the DOM, so a node-bound listener dies on the first re-render. */
@@ -1065,7 +1083,7 @@ window.delImg=async function(id,url,figEl){
     if(error)throw error;
     // drop it locally so it disappears instantly, don't wait for the round trip
     if(imgStore[drawerKey])imgStore[drawerKey]=imgStore[drawerKey].filter(x=>x.id!==id);
-    renderDrawer();renderItems();renderAreaPlus();
+    renderDrawer();renderItems();renderAreaPlus();renderDoorBadges();
     const path=decodeURIComponent((url||'').split('/board/')[1]||'');
     if(path){try{await sb.storage.from('board').remove([path]);}catch(_){}}  // best-effort cleanup
     toast("Image deleted");
