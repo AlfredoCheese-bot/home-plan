@@ -900,8 +900,23 @@ document.getElementById('drClose').addEventListener('click',()=>{drawer.classLis
 function renderDrawer(){
   document.getElementById('drTitle').textContent=`📷 ${drawerTitle}`;
   const list=imgStore[drawerKey]||[];
+  // built with real listeners, NOT interpolated inline handlers — pin ids are UUIDs and
+  // an unquoted UUID in an onclick attribute is a syntax error, which silently killed delete.
   const grid=document.getElementById('drGrid');
-  grid.innerHTML=list.map(p=>`<figure class="dpin"><img src="${p.url}" loading="lazy" onclick="openLB('${p.url}')">${READONLY?'':`<button class="rm" onclick="delImg(${p.id},'${p.url}')">×</button>`}</figure>`).join('');
+  grid.innerHTML='';
+  list.forEach(p=>{
+    const fig=document.createElement('figure');fig.className='dpin';
+    const img=document.createElement('img');img.src=p.url;img.loading='lazy';
+    img.addEventListener('click',()=>openLB(p.url));
+    fig.appendChild(img);
+    if(!READONLY){
+      const b=document.createElement('button');
+      b.className='rm';b.textContent='×';b.title='Delete image';b.setAttribute('aria-label','Delete image');
+      b.addEventListener('click',ev=>{ev.stopPropagation();delImg(p.id,p.url,fig);});
+      fig.appendChild(b);
+    }
+    grid.appendChild(fig);
+  });
   document.getElementById('drEmpty').style.display=list.length?'none':'block';
   document.getElementById('drAdd').style.display=READONLY?'none':'inline-block';
 }
@@ -923,12 +938,23 @@ fileInput.addEventListener('change',async e=>{
   }
   fileInput.value='';await refreshImagesOnly();toast("Image added");
 });
-window.delImg=async function(id,url){
-  if(!sb)return;
-  try{const path=decodeURIComponent((url||'').split('/board/')[1]||'');
-    if(path)await sb.storage.from('board').remove([path]);
-    await sb.from('pins').delete().eq('id',id);
-  }catch(e){}
+window.delImg=async function(id,url,figEl){
+  if(!sb)return alert("Sync isn't connected.");
+  if(!confirm("Delete this image? Images can't be undone."))return;
+  if(figEl)figEl.style.opacity='.35';
+  try{
+    const {error}=await sb.from('pins').delete().eq('id',id);   // the row is what matters
+    if(error)throw error;
+    // drop it locally so it disappears instantly, don't wait for the round trip
+    if(imgStore[drawerKey])imgStore[drawerKey]=imgStore[drawerKey].filter(x=>x.id!==id);
+    renderDrawer();renderItems();renderAreaPlus();
+    const path=decodeURIComponent((url||'').split('/board/')[1]||'');
+    if(path){try{await sb.storage.from('board').remove([path]);}catch(_){}}  // best-effort cleanup
+    toast("Image deleted");
+  }catch(e){
+    if(figEl)figEl.style.opacity='';
+    alert("Couldn't delete the image: "+(e.message||e));
+  }
   await refreshImagesOnly();
 };
 const lb=document.getElementById('lb');
