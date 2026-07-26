@@ -41,8 +41,9 @@
   .wall{fill:none;stroke:#26241f;stroke-width:7;stroke-linecap:square}
   .wall-removed{fill:none;stroke:#c0392b;stroke-width:4;stroke-dasharray:13 8;opacity:.75}
   .glazing{fill:none;stroke:#4a8fa3;stroke-width:4;stroke-dasharray:2 5;stroke-linecap:round}
-  .rlabel{font-size:12.5px;font-weight:600;fill:#57534a;pointer-events:none;letter-spacing:.04em}
-  .rdim{font-size:10px;fill:#a09a8e;pointer-events:none}
+  .rlabel{font-size:12px;font-weight:700;fill:#3d3a35;pointer-events:none;letter-spacing:.04em}
+  .rdim{font-size:9.5px;fill:#8a8378;pointer-events:none}
+  .tagbg{fill:rgba(255,255,255,.86);stroke:rgba(0,0,0,.07);stroke-width:1}
   .odim{font-size:11px;fill:#6f6a61;font-weight:600}
   .areaplus{cursor:pointer}
   .areaplus circle{fill:#fff;stroke:#b8b2a6;stroke-width:1.5}
@@ -524,20 +525,29 @@ const svg=document.getElementById('plan');
 const NS="http://www.w3.org/2000/svg";
 svg.setAttribute('viewBox','-54 -56 1320 1060');
 function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
-const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
-svg.append(gBase,gWallHit,gItems,gWalls,gPlus,gHandles,gIH);
+// gLabels sits ABOVE the furniture so room names are never buried by a cabinet
+const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gLabels=el('g',{}),gPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
+svg.append(gBase,gWallHit,gItems,gWalls,gLabels,gPlus,gHandles,gIH);
+gLabels.style.pointerEvents='none';
 
+// name + size on a translucent tag, tucked into the room's top-left (the ⊕ owns top-right)
+function roomTag(cx,cy,name,sub,anchor){
+  const g=el('g',{});
+  const wName=name.length*6.6, wSub=sub?sub.length*5.2:0;
+  const w=Math.max(wName,wSub)+14, h=sub?30:19;
+  const x=anchor==='middle'?cx-w/2:cx;
+  g.appendChild(el('rect',{class:'tagbg',x,y:cy-13,width:w,height:h,rx:3}));
+  const t=el('text',{class:'rlabel',x:x+w/2,y:cy,'text-anchor':'middle'});t.textContent=name;g.appendChild(t);
+  if(sub){const d=el('text',{class:'rdim',x:x+w/2,y:cy+12,'text-anchor':'middle'});d.textContent=sub;g.appendChild(d);}
+  return g;
+}
 roomsFill.forEach(r=>{
   gBase.appendChild(el('rect',{class:'rm-fill',x:r.x*S,y:r.z*S,width:r.w*S,height:r.d*S,fill:Z[r.cat],opacity:r.util?0.5:0.85}));
-  const t=el('text',{class:'rlabel',x:(r.x+r.w/2)*S,y:(r.z+0.32)*S,'text-anchor':'middle'});
-  t.textContent=r.n;gBase.appendChild(t);
-  if(!r.util&&!r.partOf){
-    const d=el('text',{class:'rdim',x:(r.x+r.w/2)*S,y:(r.z+0.55)*S,'text-anchor':'middle'});
-    d.textContent=`${r.w.toFixed(2)} × ${r.d.toFixed(2)} m`;gBase.appendChild(d);
-  }
+  const sub=(!r.util&&!r.partOf)?`${r.w.toFixed(2)} × ${r.d.toFixed(2)} m`:'';
+  if(r.n)gLabels.appendChild(roomTag(r.x*S+11,(r.z)*S+20,r.n,sub));
 });
 // corridor label
-const cor=el('text',{class:'rdim',x:6.4*S,y:4.12*S,'text-anchor':'middle'});cor.textContent='CORRIDOR';gBase.appendChild(cor);
+gLabels.appendChild(roomTag(6.4*S,4.12*S,'CORRIDOR','','middle'));
 // overall dims
 const d1=el('text',{class:'odim',x:6.05*S,y:-22,'text-anchor':'middle'});d1.textContent='12 095';gBase.appendChild(d1);
 const d2=el('text',{class:'odim',x:-24,y:4.68*S,'text-anchor':'middle',transform:`rotate(-90 -24 ${4.68*S})`});d2.textContent='9 365';gBase.appendChild(d2);
