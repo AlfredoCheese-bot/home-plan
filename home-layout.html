@@ -22,7 +22,12 @@
   .bar a{font-size:11px;letter-spacing:.04em;color:var(--muted);text-decoration:none;
     border:1px solid var(--line);padding:8px 13px;border-radius:2px}
   .bar a:hover{color:var(--ink);border-color:var(--ink)}
-  .synced{font-size:11px;color:var(--muted)} .synced.off{color:#b00020}
+  .synced{font-size:11px;color:var(--muted)} .synced.off{color:#b45f22;font-weight:600}
+  .verbanner{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 0 10px;
+    padding:10px 14px;border:1px solid #e3cba8;border-left:3px solid var(--accent);
+    border-radius:4px;background:#fdf6ec;font-size:12.5px;color:var(--ink)}
+  .verbanner button{font-size:11px;padding:6px 12px;border-color:var(--accent);color:var(--accent)}
+  .verbanner button.ghost{border-color:var(--line);color:var(--muted)}
   button{font:inherit;font-size:11px;letter-spacing:.04em;padding:8px 13px;
     border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:2px;cursor:pointer}
   button:hover{border-color:var(--ink)}
@@ -188,7 +193,7 @@
 <body>
 <header>
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
-  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. Keep alternatives with <b>＋ Save version</b> and switch between them from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
+  <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. <b>Everything saves automatically</b> — the status line above the plan always tells you where you stand. <b>＋ Save version</b> keeps a named snapshot you can return to later from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. <b>Every room, piece AND door has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
   <div class="bar">
@@ -250,6 +255,7 @@
     <span class="hintsm">hold to pick up · drag an orange end-dot to change length or angle</span>
   </div>
 
+  <div id="newerVer" class="verbanner" style="display:none"></div>
   <div class="planscroll"><svg id="plan" aria-label="Modular floor plan"></svg></div>
 
   <div class="legend">
@@ -450,14 +456,50 @@ async function loadAll(){
       }catch(e){ items=structuredClone(seedItems); wallSegs=seedWalls(); }
     }
     else { items=structuredClone(seedItems); wallSegs=seedWalls(); }
-    dirty=false;updateSave();renderItems();renderWalls();renderAreaPlus();
-    setSync(READONLY?"◍ Shared layout — view only":"◍ Live sync — shared with everyone on the link");
+    dirty=false;
+    const serverAt=stateRow?(Date.parse(JSON.parse(stateRow.url).updated)||0):0;
+    if(serverAt)lastSavedAt=serverAt;
+    recoverDraft(serverAt);          // work this device made but never got to save
+    flagNewerVersion(serverAt);      // a saved version newer than the live layout
+    updateSave();renderItems();renderWalls();renderAreaPlus();
+    renderStatus();
     if(drawerKey)renderDrawer();
   }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();}}
 }
 /* ================= named versions =================
    Snapshots live alongside the layout as `layout:ver:*` rows. Loading one only changes
    what YOU see — it isn't shared until you press Save layout. Images stay common to all. */
+/* if this device has newer unsaved work than the server, put it back */
+function recoverDraft(serverAt){
+  if(READONLY)return;
+  let d=null;try{d=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');}catch(e){}
+  if(!d||!d.items)return;
+  const stale=Date.now()-d.at>24*3600*1000;
+  if(stale||d.at<=serverAt+1000){clearDraft();return;}
+  items=d.items;wallSegs=d.walls||wallSegs;
+  dirty=true;scheduleSave();
+  toast("Restored unsaved changes from this device");
+}
+/* the trap: '+ Save version' doesn't touch the live layout, so the newest version
+   can be newer than what the editor opens with */
+function flagNewerVersion(serverAt){
+  const bar=document.getElementById('newerVer');if(!bar)return;
+  bar.style.display='none';
+  if(READONLY||!versions.length)return;
+  const newest=versions.reduce((a,b)=>
+    (Date.parse(b.updated)||0)>(Date.parse(a.updated)||0)?b:a);
+  const vAt=Date.parse(newest.updated)||0;
+  if(vAt<=serverAt+1000)return;
+  bar.innerHTML='';
+  const txt=document.createElement('span');
+  txt.innerHTML='Your saved version <b>“'+esc(newest.name)+'”</b> is newer than the layout on screen.';
+  const go=document.createElement('button');go.textContent='Load it';
+  go.addEventListener('click',()=>{document.getElementById('verSel').value=String(newest.rowId);
+    loadVersion(newest.rowId);bar.style.display='none';});
+  const no=document.createElement('button');no.className='ghost';no.textContent='Dismiss';
+  no.addEventListener('click',()=>{bar.style.display='none';});
+  bar.append(txt,go,no);bar.style.display='flex';
+}
 function renderVersions(){
   const sel=document.getElementById('verSel');if(!sel)return;
   const keep=sel.value;
@@ -487,15 +529,16 @@ async function saveVersion(){
 }
 function loadVersion(rowId){
   const v=versions.find(x=>String(x.rowId)===String(rowId));if(!v)return;
-  if(dirty&&!confirm("You have unsaved changes. Load \""+v.name+"\" and discard them?")){
+  if(!confirm('Load “'+v.name+'”? It replaces the layout on screen and becomes your live layout.\n\nYour current arrangement stays available via Undo, and any saved versions are untouched.')){
     document.getElementById('verSel').value='';return;
   }
   pushHistory(snapshot());
   items=structuredClone(v.items);wallSegs=structuredClone(v.walls);
   wallSeq=wallSegs.reduce((m,w)=>Math.max(m,(+String(w.id).replace(/\D/g,''))+1||0),0);
-  selectedId=null;selWall=null;markDirty();renderItems();renderWalls();
+  selectedId=null;selWall=null;viewingVersion=v.name;
+  markDirty();renderItems();renderWalls();      // autosaves — what's on screen is what's saved
   document.getElementById('verDel').disabled=false;
-  toast('Loaded "'+v.name+'" — press Save layout to make it the shared one');
+  toast('Loaded "'+v.name+'" — this is now your live layout');
 }
 async function deleteVersion(){
   const sel=document.getElementById('verSel');const id=sel.value;if(!id)return;
@@ -514,19 +557,31 @@ document.getElementById('verSel').addEventListener('change',e=>{
   else document.getElementById('verDel').disabled=true;
 });
 
-async function saveState(){
-  if(!sb)return alert("Sync isn't connected.");
-  const btn=document.getElementById('saveBtn');btn.disabled=true;btn.textContent="Saving…";
+async function saveState(auto){
+  if(!sb){if(!auto)alert("Sync isn't connected.");return;}
+  if(READONLY)return;
+  if(saving){scheduleSave();return;}          // a save is in flight — coalesce into the next one
+  clearTimeout(saveTimer);saving=true;updateSave();
   try{
     const url=JSON.stringify({v:2,updated:new Date().toISOString(),items,walls:wallSegs});
+    selfWriteUntil=Date.now()+2500;           // don't let our own write bounce back as a reload
     const ins=await sb.from('pins').insert({room:STATE_ROOM,section:SEC,url}).select('id').single();
     if(ins.error)throw ins.error;
     await sb.from('pins').delete().eq('room',STATE_ROOM).neq('id',ins.data.id);
-    dirty=false;toast("Layout saved — synced live");
-  }catch(e){alert("Save failed: "+(e.message||e));}
-  btn.textContent="Save layout";updateSave();
+    dirty=false;lastSavedAt=Date.now();viewingVersion=null;clearDraft();
+    if(!auto)toast("Layout saved — synced live");
+  }catch(e){
+    if(auto){setSync("⚠ couldn't save — will retry",1);scheduleSave();}
+    else alert("Save failed: "+(e.message||e));
+  }
+  saving=false;updateSave();
 }
-function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{event:'*',schema:'public',table:'pins'},()=>{ if(!dirty)loadAll(); else refreshImagesOnly(); }).subscribe(); }
+// last-ditch: flush on the way out
+window.addEventListener('pagehide',()=>{if(dirty&&sb)saveState(true);});
+function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{event:'*',schema:'public',table:'pins'},()=>{
+  if(Date.now()<selfWriteUntil){refreshImagesOnly();return;}   // echo of our own autosave
+  if(!dirty)loadAll(); else refreshImagesOnly();
+}).subscribe(); }
 async function refreshImagesOnly(){
   if(!sb)return;
   try{const {data}=await sb.from('pins').select('id,room,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
@@ -848,7 +903,26 @@ function syncToolbar(){
   document.getElementById('tW').value=Math.round(it.w*1000);
   document.getElementById('tD').value=Math.round(it.d*1000);
 }
-function markDirty(){dirty=true;updateSave();}
+/* ================= autosave =================
+   Edits used to live only in memory until you pressed Save, so a closed tab lost them.
+   Every change now stashes a local draft and schedules a debounced save. */
+const DRAFT_KEY='home-layout-draft-v1';
+let saveTimer=null,saving=false,lastSavedAt=null,selfWriteUntil=0,viewingVersion=null;
+function markDirty(){dirty=true;stashDraft();scheduleSave();updateSave();}
+function scheduleSave(){
+  if(READONLY||!sb)return;
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>saveState(true),1200);
+}
+function stashDraft(){try{localStorage.setItem(DRAFT_KEY,
+  JSON.stringify({at:Date.now(),items,walls:wallSegs}));}catch(e){}}
+function clearDraft(){try{localStorage.removeItem(DRAFT_KEY);}catch(e){}}
+function timeAgo(d){
+  const s=Math.round((Date.now()-d)/1000);
+  if(s<45)return'just now'; if(s<90)return'1 min ago';
+  if(s<3600)return Math.round(s/60)+' min ago';
+  if(s<7200)return'1 hr ago'; return Math.round(s/3600)+' hr ago';
+}
 
 /* ================= undo ================= */
 const HIST=[],HMAX=60;
@@ -907,7 +981,24 @@ function beginGesture(e,h){
   window.addEventListener('pointerup',up);
   window.addEventListener('pointercancel',up);
 }
-function updateSave(){const b=document.getElementById('saveBtn');b.disabled=!dirty||READONLY;}
+function updateSave(){
+  const b=document.getElementById('saveBtn');
+  if(b){b.disabled=(!dirty&&!saving)||READONLY;
+    b.textContent=saving?'Saving…':dirty?'Save now':'Saved';}
+  renderStatus();
+}
+/* the status line always says exactly what you're looking at and whether it's safe */
+function renderStatus(){
+  const s=document.getElementById('sync');if(!s)return;
+  if(READONLY){s.textContent='◍ Shared layout — view only';return;}
+  let t,warn=false;
+  if(viewingVersion){t='▲ Viewing saved version “'+viewingVersion+'” — it becomes the live layout once saved';warn=true;}
+  else if(saving)t='◍ Saving…';
+  else if(dirty)t='◍ Unsaved changes — saving automatically';
+  else t='◍ All changes saved'+(lastSavedAt?' · '+timeAgo(lastSavedAt):'')+' · live for everyone';
+  s.textContent=t;s.classList.toggle('off',warn);
+}
+setInterval(()=>{if(!dirty&&!saving&&lastSavedAt)renderStatus();},30000);
 document.getElementById('tLabel').addEventListener('input',e=>{const it=cur();if(it){it.label=e.target.value.toUpperCase();markDirty();renderItems();}});
 document.getElementById('tLabel').addEventListener('focus',()=>{if(cur())pushHistory(snapshot());});
 document.getElementById('tType').addEventListener('change',e=>{const it=cur();if(it){pushHistory(snapshot());it.type=e.target.value;markDirty();renderItems();}});
