@@ -60,10 +60,10 @@
   .tagbg{fill:rgba(255,255,255,.86);stroke:rgba(0,0,0,.07);stroke-width:1}
   .odim{font-size:11px;fill:#6f6a61;font-weight:600}
   .areaplus{cursor:pointer}
-  .areaplus circle{fill:#fff;stroke:#b8b2a6;stroke-width:1.5}
-  .areaplus:hover circle{stroke:var(--ink)}
-  .areaplus text{font-size:13px;fill:#57534a;font-weight:700;pointer-events:none}
-  .areaplus .cnt{font-size:9px;fill:#fff;font-weight:700}
+  .areaplus circle{fill:#fff;stroke:#b8b2a6}
+  .areaplus:hover .ink{stroke:var(--ink)}
+  .areaplus text{fill:#57534a;font-weight:700;pointer-events:none}   /* font-size set per-render, see badgeK() */
+  .areaplus .cnt{fill:#fff;font-weight:700}
   .areaplus .cntbg{fill:var(--accent);stroke:none}
 
   /* items */
@@ -88,12 +88,24 @@
   .rhandle.ne,.rhandle.sw{cursor:nesw-resize}
   .hintsm{font-size:10.5px;color:var(--muted);font-style:italic}
   /* per-piece image control — subtle ⊕ when empty, solid blue count when filled */
-  .imgbadge{cursor:pointer}
-  .imgbadge circle{fill:#fff;stroke:#c3bcb0;stroke-width:1.3;opacity:.9}
-  .imgbadge text{fill:#8a8378 !important;font-size:11px !important;font-weight:700;pointer-events:none}
-  .imgbadge:hover circle{stroke:var(--ink);opacity:1}
-  .imgbadge.has circle{fill:#3b6ea5;stroke:#3b6ea5;opacity:1}
-  .imgbadge.has text{fill:#fff !important;font-size:9px !important}
+  /* the ⊕ is a control, not part of the drawing — the halo lifts it off whatever is beneath,
+     and .hit is an invisible fingertip-sized target so it opens on the first tap */
+  /* an empty ⊕ recedes so 38 of them don't shout over the plan; it stays fully tappable */
+  .imgbadge{cursor:pointer;touch-action:none;opacity:.55;transition:opacity .12s}
+  .imgbadge.has,.imgbadge.live,.imgbadge:hover,.imgbadge.pressed{opacity:1}
+  /* NB: no font-size / stroke-width here — those are set as attributes so they can be
+     scaled by badgeK(); a CSS rule (let alone !important) would override the attribute. */
+  .imgbadge .halo{fill:#fff;stroke:#fff}
+  .imgbadge .ink{fill:#fff;stroke:#9a9287}
+  .imgbadge text{fill:#6b645a !important;font-weight:700;pointer-events:none}
+  .imgbadge .hit{fill:transparent;stroke:none}
+  .imgbadge:hover .ink{stroke:var(--ink)}
+  .imgbadge.pressed .ink{fill:#efece5;stroke:var(--ink)}
+  .imgbadge.has .ink{fill:#3b6ea5;stroke:#2c5680}
+  .imgbadge.has text{fill:#fff !important}
+  .imgbadge.has.pressed .ink{fill:#2c5680}
+  .areaplus .hit{fill:transparent;stroke:none}
+  .areaplus.pressed .ink{fill:#efece5}
 
   /* toolbar */
   /* pinned to the viewport so showing it never reflows (and never shifts the plan mid-drag) */
@@ -195,7 +207,7 @@
   <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
   <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. <b>Everything saves automatically</b> — the status line above the plan always tells you where you stand. <b>＋ Save version</b> keeps a named snapshot you can return to later from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
-    <b>grey</b> = loose furniture. <b>Every room, piece AND door has its own ⊕</b> — tap it to attach reference images; it turns into a blue count once there are some.</div>
+    <b>grey</b> = loose furniture. <b>Every room, piece AND door has its own ⊕</b>, sitting just off its top-right corner — tap it to attach reference images; it turns into a solid blue count once there are some.</div>
   <div class="bar">
     <a href="home-design-board.html">← Design board</a>
     <span class="synced" id="sync">◍ Live sync</span>
@@ -610,8 +622,9 @@ const NS="http://www.w3.org/2000/svg";
 svg.setAttribute('viewBox','-54 -56 1320 1060');
 function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
 // gLabels sits ABOVE the furniture so room names are never buried by a cabinet
-const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gLabels=el('g',{}),gPlus=el('g',{}),gDoorPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
-svg.append(gBase,gWallHit,gItems,gWalls,gLabels,gPlus,gDoorPlus,gHandles,gIH);
+// image ⊕ badges live in their own layers ABOVE everything, so no fixture can swallow the tap
+const gBase=el('g',{}),gWallHit=el('g',{}),gItems=el('g',{}),gWalls=el('g',{}),gLabels=el('g',{}),gPlus=el('g',{}),gDoorPlus=el('g',{}),gItemPlus=el('g',{}),gHandles=el('g',{}),gIH=el('g',{});
+svg.append(gBase,gWallHit,gItems,gWalls,gLabels,gPlus,gDoorPlus,gItemPlus,gHandles,gIH);
 gLabels.style.pointerEvents='none';
 
 // name + size on a translucent tag, tucked into the room's top-left (the ⊕ owns top-right)
@@ -703,6 +716,50 @@ function renderWalls(){
   renderDoorBadges();
   syncWallBar();
 }
+/* ---- image ⊕ badges -------------------------------------------------------
+   Three rules, learned the hard way on an iPhone:
+   1. draw them in a top layer so a neighbouring fixture can never cover the tap
+   2. give them a hit circle far bigger than the ink (a fingertip is ~44px)
+   3. fire on pointerup with a movement tolerance — a plain 'click' is cancelled
+      by the few px of finger travel every real tap has, which is why it took
+      several jabs to open the drawer.                                        */
+/* Sizes below are SCREEN pixels, not plan units. The plan is drawn at a 1320-unit viewBox
+   into as little as 700 CSS px, so a badge nominally r=8.5 was landing on screen at ~9px
+   across — the real reason it took several jabs to hit. badgeK() undoes that scale so the
+   control is a constant, fingertip-sized target however far the plan is zoomed out. */
+const BADGE_R_PX=11, BADGE_HIT_PX=23, TAP_SLOP=16;
+function badgeK(){
+  const w=svg.getBoundingClientRect().width;
+  return w?clamp(1320/w,1,2.4):1.9;
+}
+function makeBadge(bx,by,n,onTap,extra){
+  const k=badgeK(), R=BADGE_R_PX*k, HIT=BADGE_HIT_PX*k, FS=(n?11:14)*k;
+  const g=el('g',{class:'imgbadge'+(n?' has':'')+(extra?' '+extra:'')});
+  g.appendChild(el('circle',{class:'halo',cx:bx,cy:by,r:R+2.5*k,'stroke-width':2.5*k}));
+  g.appendChild(el('circle',{class:'ink',cx:bx,cy:by,r:R,'stroke-width':1.6*k}));
+  const t=el('text',{x:bx,y:by+FS*0.34,'text-anchor':'middle','font-size':FS});
+  t.textContent=n?n:'+';g.appendChild(t);
+  g.appendChild(el('circle',{class:'hit',cx:bx,cy:by,r:HIT}));
+  attachBadgeTap(g,onTap);
+  return g;
+}
+function attachBadgeTap(g,fn){
+  g.addEventListener('pointerdown',e=>{
+    e.preventDefault();e.stopPropagation();          // never let this start a drag
+    const sx=e.clientX,sy=e.clientY;
+    g.classList.add('pressed');
+    try{g.setPointerCapture(e.pointerId);}catch(_){}
+    const up=ev=>{
+      g.classList.remove('pressed');
+      g.removeEventListener('pointerup',up);g.removeEventListener('pointercancel',up);
+      if(ev.type==='pointercancel')return;
+      if(Math.hypot(ev.clientX-sx,ev.clientY-sy)>TAP_SLOP)return;   // that was a scroll, not a tap
+      ev.stopPropagation();fn();
+    };
+    g.addEventListener('pointerup',up);g.addEventListener('pointercancel',up);
+  });
+  g.addEventListener('click',e=>e.stopPropagation());
+}
 /* per-door image ⊕ — lives in its own clickable layer, since gWalls is pointer-events:none */
 function renderDoorBadges(){
   gDoorPlus.innerHTML='';
@@ -711,13 +768,8 @@ function renderDoorBadges(){
     if(!n&&READONLY)return;
     const s=seg(w),side=((w.flip||0)&2)?-1:1;
     // sit on the side away from the swing/panels so the symbol stays readable
-    const bx=(s.x1+s.x2)/2-s.nx*side*15, by=(s.y1+s.y2)/2-s.ny*side*15;
-    const g=el('g',{class:'imgbadge'+(n?' has':'')});
-    g.appendChild(el('circle',{cx:bx,cy:by,r:8.5}));
-    const t=el('text',{x:bx,y:by+3.5,'text-anchor':'middle'});t.textContent=n?n:'+';g.appendChild(t);
-    g.addEventListener('pointerdown',e=>e.stopPropagation());
-    g.addEventListener('click',e=>{e.stopPropagation();openDrawer(key,DOORS[w.kind]||'Door');});
-    gDoorPlus.appendChild(g);
+    const bx=(s.x1+s.x2)/2-s.nx*side*18, by=(s.y1+s.y2)/2-s.ny*side*18;
+    gDoorPlus.appendChild(makeBadge(bx,by,n,()=>openDrawer(key,DOORS[w.kind]||'Door')));
   });
 }
 /* IMPORTANT: gesture listeners go on window, never on the SVG node.
@@ -781,13 +833,16 @@ function renderAreaPlus(){
   gPlus.innerHTML='';
   AREAS.forEach(r=>{
     const key='area:'+r.id, n=(imgStore[key]||[]).length;
-    const cx=(r.x+r.w)*S-16, cy=r.z*S+16;
+    const k=badgeK(), R=12*k;
+    const cx=(r.x+r.w)*S-R-4, cy=r.z*S+R+4;
     const g=el('g',{class:'areaplus'});
-    g.appendChild(el('circle',{cx,cy,r:10}));
-    const t=el('text',{x:cx,y:cy+4.5,'text-anchor':'middle'});t.textContent='+';g.appendChild(t);
-    if(n){ g.appendChild(el('circle',{class:'cntbg',cx:cx+9,cy:cy-9,r:7}));
-      const c=el('text',{class:'cnt',x:cx+9,y:cy-6,'text-anchor':'middle'});c.textContent=n;g.appendChild(c); }
-    g.addEventListener('click',e=>{e.stopPropagation();openDrawer(key,r.n);});
+    g.appendChild(el('circle',{class:'ink',cx,cy,r:R,'stroke-width':1.6*k}));
+    const t=el('text',{x:cx,y:cy+5*k,'text-anchor':'middle','font-size':15*k});t.textContent='+';g.appendChild(t);
+    if(n){ g.appendChild(el('circle',{class:'cntbg',cx:cx+R*.82,cy:cy-R*.82,r:7.5*k}));
+      const c=el('text',{class:'cnt',x:cx+R*.82,y:cy-R*.82+3.5*k,'text-anchor':'middle','font-size':10*k});
+      c.textContent=n;g.appendChild(c); }
+    g.appendChild(el('circle',{class:'hit',cx,cy,r:BADGE_HIT_PX*k}));
+    attachBadgeTap(g,()=>openDrawer(key,r.n));
     gPlus.appendChild(g);
   });
 }
@@ -809,27 +864,34 @@ function renderItems(){
       if(Math.max(w,h)>it.label.length*6.2)t.textContent=it.label;
       g.appendChild(t);
     }
-    // per-piece image control: ⊕ when empty, blue count when it has images
-    const n=(imgStore['item:'+it.id]||[]).length;
-    const tiny=(w<22||h<22);          // too slim to carry the control; use the toolbar 📷 instead
-    if(n||(!READONLY&&!tiny)){
-      const bx=x+w-3,by=y+3;
-      const b=el('g',{class:'imgbadge'+(n?' has':'')});
-      b.appendChild(el('circle',{cx:bx,cy:by,r:8.5}));
-      const t=el('text',{x:bx,y:by+3.5,'text-anchor':'middle'});
-      t.textContent=n?n:'+';b.appendChild(t);
-      b.addEventListener('pointerdown',e=>e.stopPropagation());
-      b.addEventListener('click',e=>{e.stopPropagation();openDrawer('item:'+it.id,it.label||'Piece');});
-      g.appendChild(b);
-    }
     attachDrag(g,it);
     gItems.appendChild(g);
   });
+  renderItemBadges();
   gIH.innerHTML='';gIH.removeAttribute('transform');
   const selIt=items.find(i=>i.id===selectedId);
   if(selIt&&!READONLY)addResizeHandles(selIt);
   syncToolbar();
 }
+/* per-piece image ⊕ — ⊕ when empty, blue count when it has images.
+   Deliberately drawn OUTSIDE the fixture's top-right corner and in the top layer:
+   sitting on the fixture made it read as part of the drawing and made it hard to hit. */
+function renderItemBadges(){
+  gItemPlus.innerHTML='';
+  const list=items.map(it=>({it,n:(imgStore['item:'+it.id]||[]).length}))
+    .filter(({it,n})=>{
+      if(it.w*S<22||it.d*S<22)return !!n;   // sliver — no room for the control; use the toolbar 📷
+      return n||!READONLY;
+    })
+    // the ones that matter win any overlap: plain ⊕ first, then filled counts, selected last
+    .sort((a,b)=>(a.it.id===selectedId)-(b.it.id===selectedId)||(a.n?1:0)-(b.n?1:0));
+  list.forEach(({it,n})=>{
+    const bx=clamp(it.x*S+it.w*S+2,-34,1246), by=clamp(it.y*S-2,-36,984);
+    gItemPlus.appendChild(makeBadge(bx,by,n,()=>openDrawer('item:'+it.id,it.label||'Piece'),
+      it.id===selectedId?'live':''));
+  });
+}
+function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
 function svgPoint(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 function attachDrag(g,it){
   g.addEventListener('pointerdown',e=>{
@@ -1191,6 +1253,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){lb.classList.remove
 
 function toast(t){const el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2200);}
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+// badge sizes are screen-relative — redraw them when the plan's scale changes (rotate, resize)
+let rsz=null;
+window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{
+  renderItemBadges();renderAreaPlus();renderDoorBadges();},150);});
 if(READONLY){document.getElementById('addBtn').style.display='none';pal.style.display='none';
   document.getElementById('addWallBtn').style.display='none';
   document.getElementById('addDoorBtn').style.display='none';
