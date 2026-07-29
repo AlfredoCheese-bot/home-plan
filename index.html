@@ -38,9 +38,13 @@
   const frame = document.getElementById("frame");
   const buttons = [...document.querySelectorAll("button[data-view]")];
 
+  // BUILD is bumped on every deploy so the iframe can never serve a stale page.
+  // Without this, a phone keeps showing an old copy of the board long after it's fixed.
+  const BUILD = "20260729b";
+
   function show(view){
     if(!views[view]) view = "3d";
-    frame.src = views[view];
+    frame.src = views[view] + "?b=" + BUILD;
     buttons.forEach(b => b.classList.toggle("active", b.dataset.view === view));
     if(location.hash.slice(1) !== view) history.replaceState(null, "", "#" + view);
   }
