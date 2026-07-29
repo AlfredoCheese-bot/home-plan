@@ -5,7 +5,7 @@
 cd "$(dirname "$0")"
 python3 - <<'PY'
 import os, json
-rooms = ["master","ensuite","bed2","bed3","living","ensbath","kitchen","shelter"]
+rooms = ["master","ensuite","bed2","living","ensbath","kitchen","shelter"]  # bed3 retired 30 Jul — merged into living under Layout 3
 exts = (".jpg",".jpeg",".png",".webp")
 def ls(p): return sorted(f for f in os.listdir(p) if f.lower().endswith(exts)) if os.path.isdir(p) else []
 m = {}

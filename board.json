@@ -24,26 +24,11 @@
     "inspirations": [],
     "furniture": []
   },
-  "bed3": {
-    "actual": [],
-    "concepts": [
-      "bed3-flex-4-tokonoma-cabinet.jpg",
-      "bed3-flex-5-shoji-glow-cabinet.jpg"
-    ],
-    "inspirations": [],
-    "furniture": []
-  },
   "living": {
     "actual": [
       "living-before-reno.jpg"
     ],
-    "concepts": [
-      "living-4b-day.jpg",
-      "living-4b-eve.jpg",
-      "living-4b-panels-smooth-eve.jpg",
-      "living-4c-day.jpg",
-      "living-4c-eve.jpg"
-    ],
+    "concepts": [],
     "inspirations": [
       "living-01-japandi-palette.jpg",
       "living-02-moody-shoji-pendant.jpg",
@@ -82,8 +67,8 @@
       "shelter-scale-plan.jpg"
     ],
     "concepts": [
-      "shelter-truescale-side-v2.jpg",
-      "shelter-2-slat-desk.jpg"
+      "shelter-2-slat-desk.jpg",
+      "shelter-truescale-side-v2.jpg"
     ],
     "inspirations": [],
     "furniture": []

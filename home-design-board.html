@@ -119,30 +119,9 @@ const rooms=[
  {id:"bed2",n:"BEDROOM 2",x:2.975,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
   pal:["#e8e0d4","#d8a3a0","#5a3d29","#caa57f"],
   notes:"Soft and light — warm walnut joinery, cream walls, dusty-pink textiles, a walnut desk, a playful graphic print, rattan accents and plants."},
- {id:"bed3",n:"FLEX LOUNGE",x:5.78,z:0,w:2.805,d:3.49,cat:"bed",zone:"design",
-  pal:["#9a5a2c","#5a3d29","#9aa88f","#caa57f"],
-  notes:"Not a bedroom — a flexible lounge that flows off the living room: somewhere to relax, read, or get on the floor with the baby. Mid-century modern leading (rich walnut, tapered legs, tan leather, a colour pop, graphic art) over a calm Japandi backdrop. Soft washable floor, rounded low furniture, hidden toy storage, open play space.",
-  conceptMeta:[
-   {name:"Ceiling Cabinet · Tokonoma Alcoves",
-    notes:"The 3m full-height walnut ceiling cabinet (hidden toy/household storage) with a feature run of <b>3 backlit rounded tokonoma niches</b>, one curated object each. Sculptural, calm, lots of negative space — the design is the emptiness. Note: open niches collect dust and sit within a toddler's reach."},
-   {name:"Ceiling Cabinet · Shoji Glow",
-    notes:"Same 3m walnut cabinet, feature run fronted by <b>glowing rice-paper / fluted-glass sliding shoji panels</b> that slide open to reveal book/ceramic/vinyl cubbies. Echoes the Living Room shoji ceiling, doubles as a soft night-light, and the panels hide clutter + protect contents from little hands — the more family-practical of the two."}
-  ]},
  {id:"living",n:"LIVING / DINING",x:8.585,z:0,w:3.765,d:6.81,cat:"live",zone:"design",hero:true,
   pal:["#9aa88f","#5a3d29","#46503f","#e8e0d4"],
-  notes:"Sage-green sofa, dark walnut floor, cream-stone tables, rice-paper lantern pendants, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs.",
-  conceptMeta:[
-   {name:"Concept 4B · Fusion — Daytime",
-    notes:"Mid-century × Japandi fusion keeping the shoji ceiling, now <b>edge-to-edge</b> wall-to-wall. Warm walnut-oak floor, curved olive bouclé sectional, tan-leather MCM lounge chair, brass arc lamp, squiggle art, camel linen curtains, curved-pattern rug. Shown in bright daylight."},
-   {name:"Concept 4B · Fusion — Evening",
-    notes:"Same scheme as 4B daytime, shown in warm dim 2700K evening — the edge-to-edge shoji ceiling glows as the main light source. Richer, moodier read of the walnut/olive/leather palette."},
-   {name:"Concept 4B · Larger Ceiling Panels — Evening",
-    notes:"Same 4B scheme and evening glow, but the shoji ceiling uses <b>fewer, larger rectangular panels</b> (a coarser grid) rather than the fine lattice — closer to the locked 3×3 trellis direction. <b>Plain smooth opal panels, no texture</b> (per the locked spec). Calmer, more modern-Japanese ceiling read."},
-   {name:"Concept 4C · Fusion — Daytime",
-    notes:"Lighter Japandi-leaning fusion: edge-to-edge shoji ceiling, pale natural oak floor, oatmeal curved sofa with one olive accent chair, glass Noguchi-style table, single large abstract, sheer oat linen curtains. Airy and minimal — makes the room feel biggest."},
-   {name:"Concept 4C · Fusion — Evening",
-    notes:"Same pared-back 4C scheme in dim warm evening — the glowing edge-to-edge ceiling over the minimal room is the most dramatic of the set. <b>Floor (researched):</b> warm-to-pale oak bridges Japandi brightness with mid-century warmth, vs Concept 1's heavier dark walnut."}
-  ]},
+  notes:"⚠ Room now includes the former Bed 3 footprint — that wall was removed under Layout 3 (30 Jul); the x/w/d above are pre-merge and need re-measuring from the Taccuino plan, same way home-layout.html was rebuilt. Sage-green sofa, dark walnut floor, cream-stone tables, a green-marble feature wall by the walnut dry-kitchen, warm cove lighting, hanging plants and cozy eclectic throws; wood dining table with black-frame leather chairs. Feature ceiling direction changed (30 Jul) — no more fine edge-to-edge shoji lattice; new direction is a wooden kumiko trellis, 3×3 backlit opal panels (~793×1643mm each, slim ~18mm walnut reveals), grid matched to the wood-panel proportions. Concepts pending — none of the current draft renders hit the spec yet."},
  {id:"ensbath",n:"BATH / WC",x:2.34,z:4.635,w:1.60,d:1.83,cat:"wet",zone:"design",
   pal:["#46503f","#5a3d29","#e8e0d4","#b08d57"],
   notes:"Walnut accents, muted-green stone tile, cream stone counter, brass fixtures, a round mirror and warm moody lighting."},
@@ -170,7 +149,7 @@ const rooms=[
   notes:"Laundry / utility."},
 ];
 const S=100; // metres -> svg units
-const VER="32"; // bump when committed images change, to bust browser cache
+const VER="33"; // bump when committed images change, to bust browser cache
 const READONLY = new URLSearchParams(location.search).has('view'); // ?view = firm-facing, no editing
 // Board data committed in the repo (so it's shared with everyone AND readable by Claude):
 //   board.json -> { roomId: { concepts:[file,...], inspirations:[file,...] } }
