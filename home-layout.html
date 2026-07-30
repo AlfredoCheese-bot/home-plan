@@ -92,7 +92,7 @@
      and .hit is an invisible fingertip-sized target so it opens on the first tap */
   /* an empty ⊕ recedes so 38 of them don't shout over the plan; it stays fully tappable */
   .imgbadge{cursor:pointer;touch-action:none;opacity:.55;transition:opacity .12s}
-  .imgbadge.has,.imgbadge.live,.imgbadge:hover,.imgbadge.pressed{opacity:1}
+  .imgbadge.has,.imgbadge.live,.imgbadge.noted,.imgbadge:hover,.imgbadge.pressed{opacity:1}
   /* NB: no font-size / stroke-width here — those are set as attributes so they can be
      scaled by badgeK(); a CSS rule (let alone !important) would override the attribute. */
   .imgbadge .halo{fill:#fff;stroke:#fff}
@@ -104,8 +104,15 @@
   .imgbadge.has .ink{fill:#3b6ea5;stroke:#2c5680}
   .imgbadge.has text{fill:#fff !important}
   .imgbadge.has.pressed .ink{fill:#2c5680}
+  /* a colour note present but no image yet — accent ring so you can spot annotated pieces at a glance */
+  .imgbadge.noted .ink{stroke:var(--accent)}
+  .imgbadge.noted.has .ink{stroke:#2c5680}   /* image wins the fill; note ring not needed */
+  .imgbadge.noted text{fill:var(--accent) !important}
+  .imgbadge.noted.has text{fill:#fff !important}
   .areaplus .hit{fill:transparent;stroke:none}
   .areaplus.pressed .ink{fill:#efece5}
+  .areaplus.noted .ink{stroke:var(--accent)}
+  .areaplus.noted text{fill:var(--accent)}
 
   /* toolbar */
   /* pinned to the viewport so showing it never reflows (and never shifts the plan mid-drag) */
@@ -163,6 +170,16 @@
   .dpin .rm{position:absolute;top:5px;right:5px;width:22px;height:22px;padding:0;font-size:14px;
     border-radius:50%;background:rgba(255,255,255,.92);border:none;display:grid;place-items:center;color:#8a3b3b}
   .dr-empty{font-size:12px;color:var(--muted);font-style:italic;padding:8px 0}
+  /* colour & material notes — one per fixture / area / door, synced like the images */
+  .dr-notes{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .dr-notelabel{display:block;font-size:11px;letter-spacing:.13em;text-transform:uppercase;
+    font-weight:600;color:var(--ink);margin-bottom:7px}
+  #drNote{width:100%;min-height:130px;resize:vertical;font-family:var(--sans,inherit);font-size:14px;
+    line-height:1.6;color:var(--ink);background:#fbfaf7;border:1px solid var(--line);border-radius:4px;
+    padding:10px 11px}
+  #drNote:focus{outline:none;border-color:var(--accent)}
+  #drNote:disabled{background:#f5f2ed;color:var(--muted)}
+  .dr-notestatus{font-size:11px;color:var(--muted);margin-top:6px;min-height:14px}
   .lb{position:fixed;inset:0;background:rgba(20,18,16,.9);display:none;place-items:center;z-index:60;padding:16px;cursor:zoom-out}
   .lb.open{display:grid}
   .lb img{max-width:100%;max-height:100%}
@@ -301,7 +318,14 @@
 <aside class="drawer" id="drawer">
   <div class="dr-head"><h2 id="drTitle">Images</h2>
     <span><button id="drAdd">+ Add images</button> <button id="drClose">✕</button></span></div>
-  <div class="dr-body"><div class="dr-grid" id="drGrid"></div><div class="dr-empty" id="drEmpty">No images yet.</div></div>
+  <div class="dr-body">
+    <div class="dr-grid" id="drGrid"></div><div class="dr-empty" id="drEmpty">No images yet.</div>
+    <div class="dr-notes">
+      <label class="dr-notelabel" for="drNote">Colour &amp; material notes</label>
+      <textarea id="drNote" placeholder="How you want to colour-combinate this — wood tone, laminate, paint, metal, stone, and the pairing you're going for. e.g. walnut carcass + brushed brass pulls, warm white walls, terracotta accent."></textarea>
+      <div class="dr-notestatus" id="drNoteStatus"></div>
+    </div>
+  </div>
 </aside>
 <input type="file" id="file" accept="image/*" multiple>
 <div class="lb" id="lb"><img alt="enlarged"></div>
@@ -442,7 +466,11 @@ const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
 //   images -> room 'layout:item:<id>' or 'layout:area:<room>'   url = storage public URL
 const STATE_ROOM='layout:state', SEC='inspiration', VER_PREFIX='layout:ver:';
 let versions=[];   // [{rowId,name,updated,items,walls}] — named snapshots, separate from the live layout
-let imgStore={}; // key -> [{id,url}]
+let imgStore={};  // key -> [{id,url}]
+let noteStore={}; // key -> {id,text} — colour/material notes
+// A DB CHECK constraint forbids new `section` values, so notes are namespaced by ROOM instead:
+// room = 'layout:note:'+key (section stays the usual SEC). After slice(7) a note key reads 'note:…'.
+const noteRoom = k => 'layout:note:'+k;
 function setSync(t,off){const s=document.getElementById('sync');if(s){s.textContent=t;s.classList.toggle('off',!!off);}}
 
 async function loadAll(){
@@ -450,14 +478,16 @@ async function loadAll(){
   try{
     const {data,error}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').order('created_at');
     if(error)throw error;
-    imgStore={};let stateRow=null;versions=[];
+    imgStore={};noteStore={};let stateRow=null;versions=[];
     (data||[]).forEach(p=>{
       if(p.room===STATE_ROOM){stateRow=p;return;}
       if(p.room.startsWith(VER_PREFIX)){
         try{const v=JSON.parse(p.url);versions.push({rowId:p.id,name:v.name||'Untitled',updated:v.updated,items:v.items,walls:v.walls});}catch(e){}
         return;
       }
-      const key=p.room.slice(7); (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
+      const key=p.room.slice(7);
+      if(key.startsWith('note:')){ noteStore[key.slice(5)]={id:p.id,text:p.url}; return; }
+      (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
     });
     renderVersions();
     if(stateRow){
@@ -475,7 +505,7 @@ async function loadAll(){
     flagNewerVersion(serverAt);      // a saved version newer than the live layout
     updateSave();renderItems();renderWalls();renderAreaPlus();
     renderStatus();
-    if(drawerKey)renderDrawer();
+    if(drawerKey){renderDrawer();renderNote();}
   }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();}}
 }
 /* ================= named versions =================
@@ -589,18 +619,20 @@ async function saveState(auto){
   saving=false;updateSave();
 }
 // last-ditch: flush on the way out
-window.addEventListener('pagehide',()=>{if(dirty&&sb)saveState(true);});
+window.addEventListener('pagehide',()=>{flushNote();if(dirty&&sb)saveState(true);});
 function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{event:'*',schema:'public',table:'pins'},()=>{
   if(Date.now()<selfWriteUntil){refreshImagesOnly();return;}   // echo of our own autosave
   if(!dirty)loadAll(); else refreshImagesOnly();
 }).subscribe(); }
 async function refreshImagesOnly(){
   if(!sb)return;
-  try{const {data}=await sb.from('pins').select('id,room,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
-    imgStore={};(data||[]).forEach(p=>{
+  try{const {data}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
+    imgStore={};noteStore={};(data||[]).forEach(p=>{
       if(p.room.startsWith(VER_PREFIX))return;
-      const key=p.room.slice(7);(imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
-    renderItems();renderAreaPlus();renderDoorBadges();if(drawerKey)renderDrawer();
+      const key=p.room.slice(7);
+      if(key.startsWith('note:')){ noteStore[key.slice(5)]={id:p.id,text:p.url}; return; }
+      (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
+    renderItems();renderAreaPlus();renderDoorBadges();if(drawerKey){renderDrawer();renderNote();}
   }catch(e){}
 }
 function compressBlob(file,max=1400,q=0.82){
@@ -764,12 +796,12 @@ function attachBadgeTap(g,fn){
 function renderDoorBadges(){
   gDoorPlus.innerHTML='';
   wallSegs.filter(w=>isDoor(w.kind)).forEach(w=>{
-    const key='door:'+w.id, n=(imgStore[key]||[]).length;
-    if(!n&&READONLY)return;
+    const key='door:'+w.id, n=(imgStore[key]||[]).length, note=!!noteStore[key];
+    if(!n&&!note&&READONLY)return;
     const s=seg(w),side=((w.flip||0)&2)?-1:1;
     // sit on the side away from the swing/panels so the symbol stays readable
     const bx=(s.x1+s.x2)/2-s.nx*side*18, by=(s.y1+s.y2)/2-s.ny*side*18;
-    gDoorPlus.appendChild(makeBadge(bx,by,n,()=>openDrawer(key,DOORS[w.kind]||'Door')));
+    gDoorPlus.appendChild(makeBadge(bx,by,n,()=>openDrawer(key,DOORS[w.kind]||'Door'),note?'noted':''));
   });
 }
 /* IMPORTANT: gesture listeners go on window, never on the SVG node.
@@ -835,7 +867,7 @@ function renderAreaPlus(){
     const key='area:'+r.id, n=(imgStore[key]||[]).length;
     const k=badgeK(), R=12*k;
     const cx=(r.x+r.w)*S-R-4, cy=r.z*S+R+4;
-    const g=el('g',{class:'areaplus'});
+    const g=el('g',{class:'areaplus'+(noteStore[key]?' noted':'')});
     g.appendChild(el('circle',{class:'ink',cx,cy,r:R,'stroke-width':1.6*k}));
     const t=el('text',{x:cx,y:cy+5*k,'text-anchor':'middle','font-size':15*k});t.textContent='+';g.appendChild(t);
     if(n){ g.appendChild(el('circle',{class:'cntbg',cx:cx+R*.82,cy:cy-R*.82,r:7.5*k}));
@@ -878,17 +910,17 @@ function renderItems(){
    sitting on the fixture made it read as part of the drawing and made it hard to hit. */
 function renderItemBadges(){
   gItemPlus.innerHTML='';
-  const list=items.map(it=>({it,n:(imgStore['item:'+it.id]||[]).length}))
-    .filter(({it,n})=>{
-      if(it.w*S<22||it.d*S<22)return !!n;   // sliver — no room for the control; use the toolbar 📷
-      return n||!READONLY;
+  const list=items.map(it=>({it,n:(imgStore['item:'+it.id]||[]).length,note:!!noteStore['item:'+it.id]}))
+    .filter(({it,n,note})=>{
+      if(it.w*S<22||it.d*S<22)return n||note;   // sliver — no room for the control; use the toolbar 📷
+      return n||note||!READONLY;
     })
     // the ones that matter win any overlap: plain ⊕ first, then filled counts, selected last
     .sort((a,b)=>(a.it.id===selectedId)-(b.it.id===selectedId)||(a.n?1:0)-(b.n?1:0));
-  list.forEach(({it,n})=>{
+  list.forEach(({it,n,note})=>{
     const bx=clamp(it.x*S+it.w*S+2,-34,1246), by=clamp(it.y*S-2,-36,984);
     gItemPlus.appendChild(makeBadge(bx,by,n,()=>openDrawer('item:'+it.id,it.label||'Piece'),
-      it.id===selectedId?'live':''));
+      [it.id===selectedId?'live':'',note?'noted':''].filter(Boolean).join(' ')));
   });
 }
 function clamp(v,lo,hi){return v<lo?lo:v>hi?hi:v;}
@@ -1184,8 +1216,8 @@ document.getElementById('exportBtn').addEventListener('click',()=>{
 /* ================= images drawer ================= */
 const drawer=document.getElementById('drawer');
 let drawerKey=null,drawerTitle='';
-function openDrawer(key,title){drawerKey=key;drawerTitle=title;renderDrawer();drawer.classList.add('open');}
-document.getElementById('drClose').addEventListener('click',()=>{drawer.classList.remove('open');drawerKey=null;});
+function openDrawer(key,title){flushNote();drawerKey=key;drawerTitle=title;renderDrawer();renderNote();drawer.classList.add('open');}
+document.getElementById('drClose').addEventListener('click',()=>{flushNote();drawer.classList.remove('open');drawerKey=null;});
 function renderDrawer(){
   document.getElementById('drTitle').textContent=`📷 ${drawerTitle}`;
   const list=imgStore[drawerKey]||[];
@@ -1209,6 +1241,52 @@ function renderDrawer(){
   document.getElementById('drEmpty').style.display=list.length?'none':'block';
   document.getElementById('drAdd').style.display=READONLY?'none':'inline-block';
 }
+/* ---- colour & material notes: one text row per key, saved like the images ----
+   Stored as a section='note' row in the same pins table, so it syncs to every
+   viewer and rides along in the read-only share link. */
+const noteEl=document.getElementById('drNote');
+let noteTimer=null,noteSaving=false;
+function setNoteStatus(m){const s=document.getElementById('drNoteStatus');if(s)s.textContent=m||'';}
+function renderNote(){
+  if(!noteEl)return;
+  noteEl.disabled=READONLY;
+  const rec=noteStore[drawerKey], text=(rec&&rec.text)||'';
+  if(document.activeElement!==noteEl) noteEl.value=text;   // never clobber the caret mid-type
+  setNoteStatus(READONLY?(text?'':'No notes yet.'):'');
+}
+function scheduleNoteSave(){
+  if(READONLY||!sb)return;
+  clearTimeout(noteTimer);setNoteStatus('Editing…');
+  noteTimer=setTimeout(flushNote,900);
+}
+async function flushNote(){
+  clearTimeout(noteTimer);
+  if(READONLY||!sb||!drawerKey||!noteEl)return;
+  const key=drawerKey, text=noteEl.value.trim(), rec=noteStore[key], saved=(rec&&rec.text)||'';
+  if(text===saved)return;                       // nothing to write
+  if(noteSaving){noteTimer=setTimeout(flushNote,400);return;}   // coalesce
+  noteSaving=true;setNoteStatus('Saving…');
+  try{
+    if(text===''){
+      if(rec&&rec.id){const {error}=await sb.from('pins').delete().eq('id',rec.id);if(error)throw error;}
+      delete noteStore[key];
+    }else{
+      // the table permits INSERT + DELETE but NOT update (RLS), so an edit = insert-new then drop-old,
+      // same pattern the layout autosave uses. Insert first so a failed delete never loses the note.
+      const ins=await sb.from('pins').insert({room:noteRoom(key),section:SEC,url:text}).select('id').single();
+      if(ins.error)throw ins.error;
+      const oldId=rec&&rec.id; noteStore[key]={id:ins.data.id,text};
+      if(oldId){await sb.from('pins').delete().eq('id',oldId);}   // best-effort drop the superseded row
+    }
+    setNoteStatus('Saved ✓');renderItems();renderAreaPlus();renderDoorBadges();
+  }catch(e){setNoteStatus('⚠ not saved — try again');}
+  noteSaving=false;
+}
+if(noteEl){
+  noteEl.addEventListener('input',scheduleNoteSave);
+  noteEl.addEventListener('blur',flushNote);
+}
+
 const fileInput=document.getElementById('file');
 document.getElementById('drAdd').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',async e=>{
