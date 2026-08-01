@@ -221,7 +221,7 @@
 </head>
 <body>
 <header>
-  <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Taccuino Layout 3</span></h1>
+  <h1>Modular Layout <span style="font-size:13px;color:var(--muted)">· Proposed Layout 3</span></h1>
   <div class="sub"><b>On a phone:</b> swipe to scroll the plan, tap to select, and <b>press &amp; hold</b> a piece or wall to pick it up — so scrolling never drags things by accident. To <b>delete</b>, select something and tap <b>✕ Remove</b> at the right of the bottom bar (or press Delete on desktop). <b>↶ Undo</b> reverses any change (⌘Z). Drag a corner square to resize. <b>Everything saves automatically</b> — the status line above the plan always tells you where you stand. <b>＋ Save version</b> keeps a named snapshot you can return to later from the <b>Saved layouts</b> list.<br>Everything is modular — <b>walls included</b>. Select a black wall to move it, change its length, or remove it; <b>+ Add wall</b> draws a new one.
     <b>Orange</b> = base cabinetry / countertops (carpentry), <b>dashed brown</b> = top-hung cabinets,
     <b>grey</b> = loose furniture. <b>Every room, piece AND door has its own ⊕</b>, sitting just off its top-right corner — tap it to attach reference images; it turns into a solid blue count once there are some.</div>
@@ -338,7 +338,7 @@
 const S=100;
 const READONLY=new URLSearchParams(location.search).has('view');
 const Z={bed:"var(--bed)",wet:"var(--wet)",live:"var(--live)",serv:"var(--serv)"};
-// Traced from Taccuino "Proposed Layout 3" (1:100). Bays 3250|2815|2815|3215 = 12095 overall.
+// Measured from the proposed Layout 3 (1:100). Bays 3250|2815|2815|3215 = 12095 overall.
 // Left depth 4650+2000+2715 = 9365. Right bay is 7015 deep and set back 1.29 m (notched corner).
 const roomsFill=[
  {id:"master", n:"MAIN BEDROOM", x:0,    z:0,    w:3.25, d:4.65, cat:"bed"},
@@ -1204,7 +1204,7 @@ document.getElementById('addBtn').addEventListener('click',()=>{
 document.getElementById('saveBtn').addEventListener('click',saveState);
 document.getElementById('resetBtn').addEventListener('click',()=>{
   if(READONLY)return;
-  if(!confirm("Reset walls and furniture back to the Taccuino Layout 3 plan? Your arrangement will be replaced (images are kept)."))return;
+  if(!confirm("Reset walls and furniture back to the Layout 3 plan? Your arrangement will be replaced (images are kept)."))return;
   items=structuredClone(seedItems);wallSegs=seedWalls();selectedId=null;selWall=null;
   markDirty();renderItems();renderWalls();toast("Reset to plan — press Save to share it");
 });
