@@ -180,6 +180,36 @@
   #drNote:focus{outline:none;border-color:var(--accent)}
   #drNote:disabled{background:#f5f2ed;color:var(--muted)}
   .dr-notestatus{font-size:11px;color:var(--muted);margin-top:6px;min-height:14px}
+  /* drawer is now a mini spec sheet: ① final concept · ② furniture + links · notes · ③ reference pins */
+  .dr-sec{margin-top:18px;padding-top:15px;border-top:1px solid var(--line)}
+  .dr-sec:first-child{margin-top:0;padding-top:0;border-top:none}
+  .dr-seclabel{display:flex;justify-content:space-between;align-items:center;gap:8px;
+    font-size:11px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:var(--ink);margin-bottom:9px}
+  .dr-seclabel .n{color:var(--muted);font-weight:700;letter-spacing:0}
+  .dr-seclabel button{font-size:10.5px;padding:5px 10px}
+  /* ① final concept — one hero image the user sets themselves */
+  .dfinal{margin:0;position:relative;border-radius:4px;overflow:hidden;background:#f5f2ed}
+  .dfinal img{display:block;width:100%;cursor:zoom-in}
+  .dfinal-bar{display:flex;gap:6px;margin-top:8px}
+  .dfinal-set{width:100%;border-style:dashed;color:var(--muted);padding:22px 12px}
+  .dfinal-set:hover{color:var(--ink);border-color:var(--ink)}
+  /* ② furniture of choice — name · price · buy link, one card each */
+  .furrow{position:relative;border:1px solid var(--line);border-radius:5px;padding:9px 9px 4px;margin-bottom:8px;background:#fbfaf7}
+  .furrow input{width:100%;margin-bottom:5px}
+  .furrow .frm{position:absolute;top:6px;right:6px;width:22px;height:22px;padding:0;font-size:14px;
+    border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:#a33}
+  .furrow .frm:hover{border-color:#a33}
+  .furrow input.fname{padding-right:30px}
+  .furrow .frow2{display:flex;gap:6px}
+  .furrow .fprice{flex:0 0 96px;margin-bottom:5px}
+  .furrow .flink{flex:1;margin-bottom:5px}
+  .dr-furnistatus{font-size:11px;color:var(--muted);margin:2px 0 8px;min-height:14px}
+  /* read-only rendering of a furniture list */
+  .furview{margin:0 0 9px;font-size:13.5px;line-height:1.5}
+  .furview a{color:#3b6ea5;text-decoration:none;font-weight:600}
+  .furview a:hover{text-decoration:underline}
+  .furview .fp{color:var(--muted)}
+  .furview .fx{color:var(--muted)}
   .lb{position:fixed;inset:0;background:rgba(20,18,16,.9);display:none;place-items:center;z-index:60;padding:16px;cursor:zoom-out}
   .lb.open{display:grid}
   .lb img{max-width:100%;max-height:100%}
@@ -316,18 +346,34 @@
 </div>
 
 <aside class="drawer" id="drawer">
-  <div class="dr-head"><h2 id="drTitle">Images</h2>
-    <span><button id="drAdd">+ Add images</button> <button id="drClose">✕</button></span></div>
+  <div class="dr-head"><h2 id="drTitle">Details</h2><button id="drClose">✕</button></div>
   <div class="dr-body">
-    <div class="dr-grid" id="drGrid"></div><div class="dr-empty" id="drEmpty">No images yet.</div>
-    <div class="dr-notes">
+    <!-- ① Final concept — the chosen image, set by hand -->
+    <section class="dr-sec">
+      <div class="dr-seclabel">Final concept</div>
+      <div id="drFinal"></div>
+    </section>
+    <!-- Colour & material notes — the concept in words -->
+    <section class="dr-sec">
       <label class="dr-notelabel" for="drNote">Colour &amp; material notes</label>
       <textarea id="drNote" placeholder="How you want to colour-combinate this — wood tone, laminate, paint, metal, stone, and the pairing you're going for. e.g. walnut carcass + brushed brass pulls, warm white walls, terracotta accent."></textarea>
       <div class="dr-notestatus" id="drNoteStatus"></div>
-    </div>
+    </section>
+    <!-- ② Furniture of choice + purchasing links -->
+    <section class="dr-sec">
+      <div class="dr-seclabel">Furniture of choice <button id="drFurniAdd">+ Add item</button></div>
+      <div id="drFurni"></div>
+      <div class="dr-furnistatus" id="drFurniStatus"></div>
+    </section>
+    <!-- ③ Reference images (pins) — demoted to the bottom -->
+    <section class="dr-sec">
+      <div class="dr-seclabel">Reference images <button id="drAdd">+ Add</button></div>
+      <div class="dr-grid" id="drGrid"></div><div class="dr-empty" id="drEmpty">No images yet.</div>
+    </section>
   </div>
 </aside>
 <input type="file" id="file" accept="image/*" multiple>
+<input type="file" id="finalFile" accept="image/*">
 <div class="lb" id="lb"><img alt="enlarged"></div>
 <div class="toast" id="toast"></div>
 
@@ -466,11 +512,17 @@ const sb=window.supabase?window.supabase.createClient(SB_URL,SB_KEY):null;
 //   images -> room 'layout:item:<id>' or 'layout:area:<room>'   url = storage public URL
 const STATE_ROOM='layout:state', SEC='inspiration', VER_PREFIX='layout:ver:';
 let versions=[];   // [{rowId,name,updated,items,walls}] — named snapshots, separate from the live layout
-let imgStore={};  // key -> [{id,url}]
-let noteStore={}; // key -> {id,text} — colour/material notes
+let imgStore={};  // key -> [{id,url}]    — reference pins
+let noteStore={}; // key -> {id,text}     — colour/material notes
+let finalStore={};// key -> {id,url}      — the one chosen "final concept" image
+let furniStore={};// key -> {id,items:[{name,price,link}]} — furniture of choice + buy links
 // A DB CHECK constraint forbids new `section` values, so notes are namespaced by ROOM instead:
 // room = 'layout:note:'+key (section stays the usual SEC). After slice(7) a note key reads 'note:…'.
 const noteRoom = k => 'layout:note:'+k;
+// a fixture/area/door counts as "annotated" (accent ring on its ⊕) if it carries ANY
+// spec detail beyond plain reference pins: a note, a final concept, or chosen furniture.
+function furniHas(key){const m=furniStore[key];return !!(m&&m.items&&m.items.some(r=>(r.name||'').trim()||(r.link||'').trim()));}
+function hasMeta(key){return !!noteStore[key]||!!finalStore[key]||furniHas(key);}
 function setSync(t,off){const s=document.getElementById('sync');if(s){s.textContent=t;s.classList.toggle('off',!!off);}}
 
 async function loadAll(){
@@ -478,7 +530,7 @@ async function loadAll(){
   try{
     const {data,error}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').order('created_at');
     if(error)throw error;
-    imgStore={};noteStore={};let stateRow=null;versions=[];
+    imgStore={};noteStore={};finalStore={};furniStore={};let stateRow=null;versions=[];
     (data||[]).forEach(p=>{
       if(p.room===STATE_ROOM){stateRow=p;return;}
       if(p.room.startsWith(VER_PREFIX)){
@@ -487,6 +539,8 @@ async function loadAll(){
       }
       const key=p.room.slice(7);
       if(key.startsWith('note:')){ noteStore[key.slice(5)]={id:p.id,text:p.url}; return; }
+      if(key.startsWith('final:')){ finalStore[key.slice(6)]={id:p.id,url:p.url}; return; }
+      if(key.startsWith('furni:')){ try{furniStore[key.slice(6)]={id:p.id,items:JSON.parse(p.url)||[]};}catch(e){} return; }
       (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});
     });
     renderVersions();
@@ -505,7 +559,7 @@ async function loadAll(){
     flagNewerVersion(serverAt);      // a saved version newer than the live layout
     updateSave();renderItems();renderWalls();renderAreaPlus();
     renderStatus();
-    if(drawerKey){renderDrawer();renderNote();}
+    if(drawerKey){renderDrawer();renderNote();renderFinal();refreshFurni();}
   }catch(e){setSync("⚠ sync error",1);if(!items.length){items=structuredClone(seedItems);wallSegs=seedWalls();renderItems();renderWalls();renderAreaPlus();}}
 }
 /* ================= named versions =================
@@ -619,7 +673,7 @@ async function saveState(auto){
   saving=false;updateSave();
 }
 // last-ditch: flush on the way out
-window.addEventListener('pagehide',()=>{flushNote();if(dirty&&sb)saveState(true);});
+window.addEventListener('pagehide',()=>{flushNote();flushFurni();if(dirty&&sb)saveState(true);});
 function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{event:'*',schema:'public',table:'pins'},()=>{
   if(Date.now()<selfWriteUntil){refreshImagesOnly();return;}   // echo of our own autosave
   if(!dirty)loadAll(); else refreshImagesOnly();
@@ -627,12 +681,14 @@ function subscribe(){ if(sb) sb.channel('layout-live').on('postgres_changes',{ev
 async function refreshImagesOnly(){
   if(!sb)return;
   try{const {data}=await sb.from('pins').select('id,room,section,url').like('room','layout:%').neq('room',STATE_ROOM).order('created_at');
-    imgStore={};noteStore={};(data||[]).forEach(p=>{
+    imgStore={};noteStore={};finalStore={};furniStore={};(data||[]).forEach(p=>{
       if(p.room.startsWith(VER_PREFIX))return;
       const key=p.room.slice(7);
       if(key.startsWith('note:')){ noteStore[key.slice(5)]={id:p.id,text:p.url}; return; }
+      if(key.startsWith('final:')){ finalStore[key.slice(6)]={id:p.id,url:p.url}; return; }
+      if(key.startsWith('furni:')){ try{furniStore[key.slice(6)]={id:p.id,items:JSON.parse(p.url)||[]};}catch(e){} return; }
       (imgStore[key]||(imgStore[key]=[])).push({id:p.id,url:p.url});});
-    renderItems();renderAreaPlus();renderDoorBadges();if(drawerKey){renderDrawer();renderNote();}
+    renderItems();renderAreaPlus();renderDoorBadges();if(drawerKey){renderDrawer();renderNote();renderFinal();refreshFurni();}
   }catch(e){}
 }
 function compressBlob(file,max=1400,q=0.82){
@@ -796,7 +852,7 @@ function attachBadgeTap(g,fn){
 function renderDoorBadges(){
   gDoorPlus.innerHTML='';
   wallSegs.filter(w=>isDoor(w.kind)).forEach(w=>{
-    const key='door:'+w.id, n=(imgStore[key]||[]).length, note=!!noteStore[key];
+    const key='door:'+w.id, n=(imgStore[key]||[]).length, note=hasMeta(key);
     if(!n&&!note&&READONLY)return;
     const s=seg(w),side=((w.flip||0)&2)?-1:1;
     // sit on the side away from the swing/panels so the symbol stays readable
@@ -867,7 +923,7 @@ function renderAreaPlus(){
     const key='area:'+r.id, n=(imgStore[key]||[]).length;
     const k=badgeK(), R=12*k;
     const cx=(r.x+r.w)*S-R-4, cy=r.z*S+R+4;
-    const g=el('g',{class:'areaplus'+(noteStore[key]?' noted':'')});
+    const g=el('g',{class:'areaplus'+(hasMeta(key)?' noted':'')});
     g.appendChild(el('circle',{class:'ink',cx,cy,r:R,'stroke-width':1.6*k}));
     const t=el('text',{x:cx,y:cy+5*k,'text-anchor':'middle','font-size':15*k});t.textContent='+';g.appendChild(t);
     if(n){ g.appendChild(el('circle',{class:'cntbg',cx:cx+R*.82,cy:cy-R*.82,r:7.5*k}));
@@ -910,7 +966,7 @@ function renderItems(){
    sitting on the fixture made it read as part of the drawing and made it hard to hit. */
 function renderItemBadges(){
   gItemPlus.innerHTML='';
-  const list=items.map(it=>({it,n:(imgStore['item:'+it.id]||[]).length,note:!!noteStore['item:'+it.id]}))
+  const list=items.map(it=>({it,n:(imgStore['item:'+it.id]||[]).length,note:hasMeta('item:'+it.id)}))
     .filter(({it,n,note})=>{
       if(it.w*S<22||it.d*S<22)return n||note;   // sliver — no room for the control; use the toolbar 📷
       return n||note||!READONLY;
@@ -1216,10 +1272,10 @@ document.getElementById('exportBtn').addEventListener('click',()=>{
 /* ================= images drawer ================= */
 const drawer=document.getElementById('drawer');
 let drawerKey=null,drawerTitle='';
-function openDrawer(key,title){flushNote();drawerKey=key;drawerTitle=title;renderDrawer();renderNote();drawer.classList.add('open');}
-document.getElementById('drClose').addEventListener('click',()=>{flushNote();drawer.classList.remove('open');drawerKey=null;});
+function openDrawer(key,title){flushNote();flushFurni();drawerKey=key;drawerTitle=title;renderDrawer();renderNote();renderFinal();renderFurni();drawer.classList.add('open');}
+document.getElementById('drClose').addEventListener('click',()=>{flushNote();flushFurni();drawer.classList.remove('open');drawerKey=null;});
 function renderDrawer(){
-  document.getElementById('drTitle').textContent=`📷 ${drawerTitle}`;
+  document.getElementById('drTitle').textContent=drawerTitle;
   const list=imgStore[drawerKey]||[];
   // built with real listeners, NOT interpolated inline handlers — pin ids are UUIDs and
   // an unquoted UUID in an onclick attribute is a syntax error, which silently killed delete.
@@ -1285,6 +1341,139 @@ async function flushNote(){
 if(noteEl){
   noteEl.addEventListener('input',scheduleNoteSave);
   noteEl.addEventListener('blur',flushNote);
+}
+
+/* ---- ① final concept: one hero image per key, set by hand (not promoted from pins) ----
+   Stored as a `layout:final:<key>` row whose url is the storage public URL. Replace = insert
+   new then drop old (same insert-only pattern as notes/state), with best-effort storage cleanup. */
+function normLink(u){u=(u||'').trim();if(!u)return'';if(!/^[a-z]+:\/\//i.test(u))u='https://'+u;return u;}
+const finalFileInput=document.getElementById('finalFile');
+function pickFinal(){finalFileInput.click();}
+function renderFinal(){
+  const box=document.getElementById('drFinal');if(!box)return;
+  box.innerHTML='';
+  const rec=finalStore[drawerKey];
+  if(rec&&rec.url){
+    const fig=document.createElement('figure');fig.className='dfinal';
+    const img=document.createElement('img');img.src=rec.url;img.loading='lazy';img.alt='Final concept';
+    img.addEventListener('click',()=>openLB(rec.url));
+    fig.appendChild(img);box.appendChild(fig);
+    if(!READONLY){
+      const bar=document.createElement('div');bar.className='dfinal-bar';
+      const rep=document.createElement('button');rep.textContent='Replace';rep.addEventListener('click',pickFinal);
+      const clr=document.createElement('button');clr.className='tb-danger';clr.textContent='✕ Clear';clr.addEventListener('click',clearFinal);
+      bar.append(rep,clr);box.appendChild(bar);
+    }
+  }else if(READONLY){
+    box.innerHTML='<div class="dr-empty">No final concept yet.</div>';
+  }else{
+    const b=document.createElement('button');b.className='dfinal-set';b.textContent='+ Set final image';
+    b.addEventListener('click',pickFinal);box.appendChild(b);
+  }
+}
+finalFileInput.addEventListener('change',async e=>{
+  if(!e.target.files.length||!drawerKey||!sb)return;
+  const key=drawerKey,f=e.target.files[0];
+  toast('Uploading…');
+  try{
+    const blob=await compressBlob(f,1800,0.85);
+    const path=`layout/${key.replace(':','-')}-final/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
+    const up=await sb.storage.from('board').upload(path,blob,{contentType:'image/jpeg',upsert:false});
+    if(up.error)throw up.error;
+    const url=sb.storage.from('board').getPublicUrl(path).data.publicUrl;
+    const ins=await sb.from('pins').insert({room:'layout:final:'+key,section:SEC,url}).select('id').single();
+    if(ins.error)throw ins.error;
+    const old=finalStore[key];finalStore[key]={id:ins.data.id,url};
+    if(old&&old.id){await sb.from('pins').delete().eq('id',old.id);
+      const op=decodeURIComponent((old.url||'').split('/board/')[1]||'');if(op){try{await sb.storage.from('board').remove([op]);}catch(_){}}}
+    if(drawerKey===key)renderFinal();
+    renderItems();renderAreaPlus();renderDoorBadges();toast('Final concept set');
+  }catch(err){alert('Upload failed: '+(err.message||err));}
+  finalFileInput.value='';
+});
+function clearFinal(){
+  if(!sb||!drawerKey)return;
+  if(!confirm('Clear the final concept image?'))return;
+  const key=drawerKey,rec=finalStore[key];if(!rec)return;
+  (async()=>{try{
+    if(rec.id)await sb.from('pins').delete().eq('id',rec.id);
+    delete finalStore[key];
+    const p=decodeURIComponent((rec.url||'').split('/board/')[1]||'');if(p){try{await sb.storage.from('board').remove([p]);}catch(_){}}
+    if(drawerKey===key)renderFinal();
+    renderItems();renderAreaPlus();renderDoorBadges();toast('Cleared');
+  }catch(e){alert("Couldn't clear: "+(e.message||e));}})();
+}
+
+/* ---- ② furniture of choice + buy links: a JSON list in a `layout:furni:<key>` row ----
+   The live model is furniStore[key].items; text edits mutate it in place and debounce-save,
+   so re-renders never fight the caret. Only writes when actually edited (_touched). */
+let furniTimer=null,furniSaving=false;
+function setFurniStatus(m){const s=document.getElementById('drFurniStatus');if(s)s.textContent=m||'';}
+function furniModel(){if(!furniStore[drawerKey])furniStore[drawerKey]={id:null,items:[]};return furniStore[drawerKey];}
+function renderFurni(){
+  const box=document.getElementById('drFurni');if(!box)return;
+  const addBtn=document.getElementById('drFurniAdd');if(addBtn)addBtn.style.display=READONLY?'none':'';
+  const rows=(furniStore[drawerKey]&&furniStore[drawerKey].items)||[];
+  box.innerHTML='';
+  if(READONLY){
+    const shown=rows.filter(r=>(r.name||'').trim()||(r.link||'').trim());
+    if(!shown.length){box.innerHTML='<div class="dr-empty">No furniture chosen yet.</div>';return;}
+    shown.forEach(r=>{
+      const d=document.createElement('div');d.className='furview';
+      const nm=(r.name||'').trim()||'Item',link=normLink(r.link);
+      if(link){const a=document.createElement('a');a.href=link;a.target='_blank';a.rel='noopener';a.textContent=nm;d.appendChild(a);}
+      else d.appendChild(document.createTextNode(nm));
+      if((r.price||'').trim()){const s=document.createElement('span');s.className='fp';s.textContent=' · '+r.price.trim();d.appendChild(s);}
+      box.appendChild(d);
+    });
+    return;
+  }
+  if(!rows.length){const e=document.createElement('div');e.className='dr-empty';e.textContent='Nothing yet — add the pieces you plan to buy.';box.appendChild(e);}
+  rows.forEach((r,i)=>{
+    const card=document.createElement('div');card.className='furrow';
+    const name=document.createElement('input');name.type='text';name.className='fname';name.placeholder='Item / model name';name.value=r.name||'';
+    name.addEventListener('input',()=>{furniModel().items[i].name=name.value;scheduleFurniSave();});
+    const row2=document.createElement('div');row2.className='frow2';
+    const price=document.createElement('input');price.type='text';price.className='fprice';price.placeholder='Price';price.value=r.price||'';
+    price.addEventListener('input',()=>{furniModel().items[i].price=price.value;scheduleFurniSave();});
+    const link=document.createElement('input');link.type='text';link.className='flink';link.placeholder='https://…  buy link';link.value=r.link||'';
+    link.addEventListener('input',()=>{furniModel().items[i].link=link.value;scheduleFurniSave();});
+    row2.append(price,link);
+    const rm=document.createElement('button');rm.className='frm';rm.textContent='×';rm.title='Remove item';rm.setAttribute('aria-label','Remove item');
+    rm.addEventListener('click',()=>{furniModel().items.splice(i,1);scheduleFurniSave();renderFurni();});
+    card.append(name,row2,rm);
+    box.appendChild(card);
+  });
+}
+/* skip the rebuild if the user is mid-type (a realtime refresh must not eat the caret) */
+function refreshFurni(){const box=document.getElementById('drFurni');if(box&&box.contains(document.activeElement))return;renderFurni();}
+{const ab=document.getElementById('drFurniAdd');if(ab)ab.addEventListener('click',()=>{
+  if(READONLY)return;furniModel().items.push({name:'',price:'',link:''});renderFurni();
+  const box=document.getElementById('drFurni'),inp=box&&box.querySelector('.furrow:last-child .fname');if(inp)inp.focus();
+});}
+function scheduleFurniSave(){if(READONLY||!sb)return;const m=furniModel();m._touched=true;clearTimeout(furniTimer);setFurniStatus('Editing…');furniTimer=setTimeout(flushFurni,900);}
+async function flushFurni(){
+  clearTimeout(furniTimer);
+  if(READONLY||!sb||!drawerKey)return;
+  const key=drawerKey,m=furniStore[key];
+  if(!m||!m._touched)return;                       // only persist real edits
+  if(furniSaving){furniTimer=setTimeout(flushFurni,400);return;}
+  m._touched=false;furniSaving=true;setFurniStatus('Saving…');
+  const clean=m.items.filter(r=>(r.name||'').trim()||(r.price||'').trim()||(r.link||'').trim())
+    .map(r=>({name:(r.name||'').trim(),price:(r.price||'').trim(),link:normLink(r.link)}));
+  try{
+    if(clean.length===0){
+      if(m.id)await sb.from('pins').delete().eq('id',m.id);
+      m.id=null;
+    }else{
+      const ins=await sb.from('pins').insert({room:'layout:furni:'+key,section:SEC,url:JSON.stringify(clean)}).select('id').single();
+      if(ins.error)throw ins.error;
+      const oldId=m.id;m.id=ins.data.id;
+      if(oldId)await sb.from('pins').delete().eq('id',oldId);
+    }
+    setFurniStatus('Saved ✓');renderItems();renderAreaPlus();renderDoorBadges();
+  }catch(e){m._touched=true;setFurniStatus('⚠ not saved — try again');}
+  furniSaving=false;
 }
 
 const fileInput=document.getElementById('file');
