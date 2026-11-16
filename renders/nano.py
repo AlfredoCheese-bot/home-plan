@@ -24,7 +24,7 @@ import argparse, base64, json, os, sys, urllib.request, urllib.error, mimetypes,
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
-MODEL = os.environ.get("NANO_MODEL", "gemini-2.5-flash-image")
+MODEL = os.environ.get("NANO_MODEL", "gemini-3-pro-image")
 
 def load_key():
     k = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
